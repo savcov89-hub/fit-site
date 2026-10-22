@@ -1,0 +1,35 @@
+:root{--bg:#fafaf8;--fg:#1d1d1b;--muted:#6b6b66;--accent:#d2491d;--line:#e4e2dc;--card:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ecebe6;--muted:#9a9993;--accent:#f0703f;--line:#2c2b28;--card:#1c1c1a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:18px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+a{color:var(--accent)}
+.top{border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
+.logo{font-weight:700;color:var(--fg);text-decoration:none}
+nav a{margin-left:16px;text-decoration:none;color:var(--fg)}
+nav a:first-child{margin-left:0}
+h1{font-size:2rem;line-height:1.2;margin:1.2em 0 .4em}
+h2{font-size:1.4rem;line-height:1.3;margin:1.6em 0 .5em}
+h3{font-size:1.15rem;margin:1.4em 0 .4em}
+.lead{font-size:1.2rem;color:var(--muted)}
+.meta,.muted,.crumbs{color:var(--muted);font-size:.9rem}
+.crumbs{margin-top:1.5em}
+.list{list-style:none;padding:0}
+.list li{padding:14px 0;border-bottom:1px solid var(--line)}
+.list li a{font-weight:600;font-size:1.1rem}
+.list li p{margin:.3em 0}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+blockquote{margin:1em 0;padding:.2em 1em;border-left:3px solid var(--accent);color:var(--muted)}
+details{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:8px 0;background:var(--card)}
+summary{cursor:pointer;font-weight:600}
+.author-box{margin:2em 0;padding:14px 18px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
+.sources{font-size:.9rem}
+.sources a{word-break:break-word}
+.bottom{border-top:1px solid var(--line);margin-top:3em;padding:1.5em 0}
+img{max-width:100%;height:auto}
+.cover{margin:1em 0 1.5em}
+.cover img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:10px;display:block}
+.cover figcaption{font-size:.8rem;color:var(--muted);margin-top:4px}
+.cover figcaption a{color:var(--muted)}

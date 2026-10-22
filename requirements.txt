@@ -1,0 +1,2 @@
+markdown>=3.6,<4
+anthropic>=2.1,<3
