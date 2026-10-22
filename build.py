@@ -196,7 +196,7 @@ def render_article(a, all_articles):
 {body}
 {faq}
 {sources}
-<aside class="author-box"><p><b>{esc(SITE["author"])}</b> — {esc(SITE["author_role"])} в {esc(SITE["club"])}, {esc(SITE["city"])}. {esc(SITE["tagline"])}</p></aside>
+<aside class="author-box"><p><b>{esc(SITE["author"])}</b> — {esc(SITE["author_role"])} в {esc(SITE["club"])}, {esc(SITE["city"])}. {esc(". ".join(SITE.get("credentials", [])))}. <a href="/#obo-mne">Подробнее об авторе</a></p></aside>
 {rel_html}
 </article>
 """
@@ -227,7 +227,9 @@ def render_index(items):
         "jobTitle": SITE["author_role"],
         "url": BASE + "/",
         "address": {"@type": "PostalAddress", "addressLocality": SITE["city"], "addressCountry": "RU"},
-        "sameAs": [SITE["instagram"]] if not placeholder(SITE.get("instagram")) else [],
+        "sameAs": [u for u in (SITE.get("instagram"), SITE.get("club_trainer_url")) if not placeholder(u)],
+        "hasCredential": SITE.get("credentials", []),
+        "alumniOf": "Новосибирский государственный педагогический университет",
     }
     extra = f'<script type="application/ld+json">{json.dumps(person, ensure_ascii=False)}</script>'
     title = f"{SITE['author']} — {SITE['author_role']} в {SITE['city']}е"
