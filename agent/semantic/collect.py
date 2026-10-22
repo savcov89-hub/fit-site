@@ -2,7 +2,7 @@
 
 Строки seeds.txt: «*» в начале — затравку ещё расширяем буквами алфавита («запрос а», «запрос б»...).
 Результат: agent/semantic/suggest_raw.csv (seed, source, suggestion).
-Запуск: python3 agent/semantic/collect.py
+Запуск: python3 agent/semantic/collect.py (нужен интернет без ограничений, например в GitHub Actions)
 """
 import csv
 import json
