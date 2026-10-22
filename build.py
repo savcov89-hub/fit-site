@@ -85,7 +85,8 @@ def head(title, description, path, extra="", image=None):
 <meta property="og:url" content="{BASE}{path}">
 <meta property="og:locale" content="ru_RU">
 {f'<meta property="og:image" content="{BASE}{esc(image)}">' if image else ""}
-<meta name="theme-color" content="#121214">
+<meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap">
