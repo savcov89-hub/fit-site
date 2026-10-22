@@ -14,9 +14,9 @@
 
 ## Что нужно один раз
 
-1. **Cloudflare Pages.** dash.cloudflare.com → Workers & Pages → Create → Pages → Connect to Git → этот репозиторий.
-   Framework preset — None, Build command — `pip install -r requirements.txt && python3 build.py`, Build output directory — `public`.
-   Адрес вида `xxx.pages.dev` записать в `site.json` → `base_url`. Свой домен: проект → Custom domains.
+1. **Cloudflare.** dash.cloudflare.com → Workers & Pages → Create → Import a repository → `fit-site`.
+   Имя проекта: `fit-site` (должно совпадать с `name` в `wrangler.jsonc`). Build command: `pip install -r requirements.txt && python3 build.py`. Deploy command: `npx wrangler deploy` (по умолчанию). Сайт раздаётся из `public/` по настройкам `wrangler.jsonc`.
+   Адрес вида `fit-site.<аккаунт>.workers.dev` записать в `site.json` → `base_url`. Свой домен: проект → Settings → Domains & Routes.
 2. **Ключ Claude API.** platform.claude.com → API Keys → Create key. Положить в GitHub: Settings → Secrets and variables → Actions → New repository secret, имя `ANTHROPIC_API_KEY`. В консоли Anthropic стоит поставить лимит расходов: Settings → Limits.
 3. **Разрешить агенту создавать запросы на проверку.** Settings → Actions → General → Workflow permissions → Read and write permissions и галочка «Allow GitHub Actions to create and approve pull requests».
 4. **Поисковики.** Яндекс Вебмастер и Google Search Console: добавить сайт, код подтверждения вписать в `site.json` (`yandex_verification`, `google_verification`), затем отправить `https://<адрес>/sitemap.xml`. Яндекс Метрика — номер счётчика в `yandex_metrika_id`.
