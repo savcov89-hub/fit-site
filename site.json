@@ -13,6 +13,25 @@
   "telegram": "[ссылка на Telegram]",
   "instagram": "https://www.instagram.com/fitness_savtsov/",
   "tagline": "Силовые тренировки без мифов: техника, прогрессия и питание на основе исследований.",
+  "portrait": "/img/mikhail-savtsov.jpg",
+  "stats": [
+    {
+      "value": "МС",
+      "label": "мастер спорта России по греко-римской борьбе"
+    },
+    {
+      "value": "165 кг",
+      "label": "жим лёжа (в софт-экипировке)"
+    },
+    {
+      "value": "202,5 кг",
+      "label": "становая тяга"
+    },
+    {
+      "value": "с 2022",
+      "label": "преподаю в Национальном университете фитнеса"
+    }
+  ],
   "yandex_verification": "",
   "google_verification": "",
   "yandex_metrika_id": "",

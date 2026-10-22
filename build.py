@@ -18,6 +18,7 @@ CONTENT = ROOT / "content"
 OUT = ROOT / "public"
 SITE = json.loads((ROOT / "site.json").read_text(encoding="utf-8"))
 BASE = SITE["base_url"].rstrip("/")
+PORTRAIT = SITE.get("portrait", "")
 
 MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля",
           "августа", "сентября", "октября", "ноября", "декабря"]
@@ -42,6 +43,17 @@ def esc(s):
 
 def placeholder(value):
     return not value or value.startswith("[")
+
+
+def portrait(cls, width, height, eager=False, small=False):
+    """Портрет Михаила: webp с запасным jpg; small — квадрат с лицом (файл <имя>-face)."""
+    if not PORTRAIT:
+        return ""
+    stem = PORTRAIT.rsplit(".", 1)[0] + ("-face" if small else "")
+    loading = 'fetchpriority="high"' if eager else 'loading="lazy"'
+    return (f'<picture class="{cls}"><source srcset="{esc(stem)}.webp" type="image/webp">'
+            f'<img src="{esc(stem)}.jpg" alt="{esc(SITE["author"])}, {esc(SITE["author_role"])}" '
+            f'width="{width}" height="{height}" {loading} decoding="async"></picture>')
 
 
 def head(title, description, path, extra="", image=None):
@@ -73,25 +85,39 @@ def head(title, description, path, extra="", image=None):
 <meta property="og:url" content="{BASE}{path}">
 <meta property="og:locale" content="ru_RU">
 {f'<meta property="og:image" content="{BASE}{esc(image)}">' if image else ""}
+<meta name="theme-color" content="#121214">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap">
 <link rel="stylesheet" href="/style.css">
+<script>document.documentElement.classList.add("js")</script>
 {verif}{extra}{metrika}
 </head>
 <body>
 <header class="top"><div class="wrap">
-<a class="logo" href="/">{esc(SITE["author"])}</a>
-<nav><a href="/stati/">Статьи</a><a href="/#uslugi">Тренировки</a><a href="/#kontakty">Контакты</a></nav>
+<a class="logo" href="/" aria-label="{esc(SITE["author"])}, на главную"><span class="mark">МС</span><span class="logo-name">{esc(SITE["author"])}</span></a>
+<nav><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a class="nav-cta" href="/#kontakty">Контакты</a></nav>
 </div></header>
-<main class="wrap">
+<main>
 """
 
 
 def foot():
     year = dt.date.today().year
+    insta = ""
+    if not placeholder(SITE.get("instagram")):
+        insta = f'<a href="{esc(SITE["instagram"])}" rel="noopener">Instagram @fitness_savtsov</a>'
     return f"""</main>
 <footer class="bottom"><div class="wrap">
-<p>© {year} {esc(SITE["author"])}, {esc(SITE["author_role"])}, {esc(SITE["city"])}.</p>
-<p class="muted">Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.</p>
+<div class="foot-brand"><span class="mark">МС</span><div><b>{esc(SITE["author"])}</b><br>{esc(SITE["author_role"].capitalize())}, {esc(SITE["club"])}, {esc(SITE["city"])}</div></div>
+<nav class="foot-nav"><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a href="/#kontakty">Контакты</a>{insta}</nav>
+<p class="muted">© {year} {esc(SITE["author"])}. Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.</p>
 </div></footer>
+<script>
+(function(){{var els=document.querySelectorAll(".reveal");if(!("IntersectionObserver" in window)){{els.forEach(function(e){{e.classList.add("in")}});return}}
+var io=new IntersectionObserver(function(es){{es.forEach(function(e){{if(e.isIntersecting){{e.target.classList.add("in");io.unobserve(e.target)}}}})}},{{rootMargin:"0px 0px -8% 0px"}});
+els.forEach(function(e){{io.observe(e)}})}})();
+</script>
 </body>
 </html>
 """
@@ -100,22 +126,24 @@ def foot():
 def contacts_html():
     rows = []
     if not placeholder(SITE.get("telegram")):
-        rows.append(f'<li>Telegram: <a href="{esc(SITE["telegram"])}">{esc(SITE["telegram"])}</a></li>')
+        rows.append(("Telegram", f'<a href="{esc(SITE["telegram"])}">{esc(SITE["telegram"])}</a>'))
     if not placeholder(SITE.get("phone")):
-        rows.append(f'<li>Телефон: <a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["phone"]))}">{esc(SITE["phone"])}</a></li>')
+        rows.append(("Телефон", f'<a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["phone"]))}">{esc(SITE["phone"])}</a>'))
     if not placeholder(SITE.get("instagram")):
-        rows.append(f'<li>Instagram: <a href="{esc(SITE["instagram"])}">@fitness_savtsov</a></li>')
+        rows.append(("Instagram", f'<a href="{esc(SITE["instagram"])}" rel="noopener">@fitness_savtsov</a>'))
     place = SITE["club"]
     if not placeholder(SITE.get("address")):
         place += f", {SITE['address']}"
-    rows.append(f"<li>Где тренирую: {esc(place)}, {esc(SITE['city'])}</li>")
+    rows.append(("Где тренирую", f"{esc(place)}, {esc(SITE['city'])}"))
     if SITE.get("club_hours"):
-        rows.append(f"<li>Клуб работает: {esc(SITE['club_hours'])}</li>")
+        rows.append(("Клуб работает", esc(SITE["club_hours"])))
     if SITE.get("club_phone"):
-        rows.append(f'<li>Ресепшн клуба: <a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["club_phone"]))}">{esc(SITE["club_phone"])}</a></li>')
+        rows.append(("Ресепшн клуба", f'<a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["club_phone"]))}">{esc(SITE["club_phone"])}</a>'))
     if SITE.get("club_url"):
-        rows.append(f'<li>Страница клуба: <a href="{esc(SITE["club_url"])}" rel="noopener">{esc(SITE["club_url"])}</a></li>')
-    return "<ul class=\"contacts\">" + "".join(rows) + "</ul>"
+        rows.append(("Страница клуба", f'<a href="{esc(SITE["club_url"])}" rel="noopener">hammer-fit.ru/kontinent</a>'))
+    return "<ul class=\"contacts\">" + "".join(
+        f"<li><span class=\"label\">{label}</span><span>{value}</span></li>" for label, value in rows
+    ) + "</ul>"
 
 
 def load_articles():
@@ -161,6 +189,7 @@ def render_article(a, all_articles):
     path = f"/stati/{a['slug']}/"
     md = markdown.Markdown(extensions=["extra", "sane_lists", "toc"])
     body = md.convert(a["body"])
+    body = re.sub(r"<table>", '<div class="table"><table>', body).replace("</table>", "</table></div>")
     faq = ""
     if a.get("faq"):
         faq = "<section class=\"faq\"><h2>Частые вопросы</h2>" + "".join(
@@ -177,26 +206,28 @@ def render_article(a, all_articles):
     related.sort(key=lambda x: -len(tags & set(x.get("tags", []))))
     rel_html = ""
     if related:
-        rel_html = "<section class=\"related\"><h2>Ещё по теме</h2><ul>" + "".join(
-            f'<li><a href="/stati/{esc(x["slug"])}/">{esc(x["title"])}</a></li>' for x in related[:4]
-        ) + "</ul></section>"
+        rel_html = "<section class=\"related\"><h2>Ещё по теме</h2>" + article_list(related[:4]) + "</section>"
     cover = ""
     if a.get("image"):
         credit = ""
         if a.get("image_credit"):
             credit = f'<figcaption><a href="{esc(a.get("image_credit_url", "#"))}" rel="nofollow noopener" target="_blank">{esc(a["image_credit"])}</a></figcaption>'
         cover = f'<figure class="cover"><img src="{esc(a["image"])}" alt="{esc(a.get("image_alt", a["title"]))}" width="1200" height="800">{credit}</figure>'
+    words = len(a["body"].split())
+    minutes = max(1, round(words / 180))
     page = head(a.get("seo_title", a["title"]), a["description"], path, article_jsonld(a, BASE + path),
                 a.get("image"))
-    page += f"""<article class="post">
-<p class="crumbs"><a href="/">Главная</a> / <a href="/stati/">Статьи</a></p>
+    page += f"""<article class="post wrap narrow">
+<p class="crumbs"><a href="/">Главная</a><span>/</span><a href="/stati/">Статьи</a></p>
 <h1>{esc(a["title"])}</h1>
-<p class="meta">{esc(SITE["author"])}, {esc(SITE["author_role"])} · {ru_date(a["date"])}</p>
+<div class="byline">{portrait("avatar", 240, 240, small=True)}<div><b>{esc(SITE["author"])}</b><br><span class="muted">{esc(SITE["author_role"].capitalize())} · {ru_date(a["date"])} · {minutes} мин чтения</span></div></div>
 {cover}
+<div class="prose">
 {body}
+</div>
 {faq}
 {sources}
-<aside class="author-box"><p><b>{esc(SITE["author"])}</b> — {esc(SITE["author_role"])} в {esc(SITE["club"])}, {esc(SITE["city"])}. {esc(". ".join(SITE.get("credentials", [])))}. <a href="/#obo-mne">Подробнее об авторе</a></p></aside>
+<aside class="author-box">{portrait("avatar", 240, 240, small=True)}<p><b>{esc(SITE["author"])}</b> — {esc(SITE["author_role"])} в {esc(SITE["club"])}, {esc(SITE["city"])}. {esc(". ".join(SITE.get("credentials", [])))}. <a href="/#obo-mne">Подробнее об авторе</a></p></aside>
 {rel_html}
 </article>
 """
@@ -208,24 +239,45 @@ def render_article(a, all_articles):
 
 
 def article_list(items):
-    return "<ul class=\"list\">" + "".join(
-        f'<li><a href="/stati/{esc(a["slug"])}/">{esc(a["title"])}</a>'
-        f'<p>{esc(a["description"])}</p><span class="muted">{ru_date(a["date"])}</span></li>'
+    return "<ul class=\"cards\">" + "".join(
+        f'<li class="card reveal"><a href="/stati/{esc(a["slug"])}/">'
+        f'<span class="card-date">{ru_date(a["date"])}</span>'
+        f'<span class="card-title">{esc(a["title"])}</span>'
+        f'<span class="card-text">{esc(a["description"])}</span>'
+        f'<span class="card-more">Читать →</span></a></li>'
         for a in items
     ) + "</ul>"
+
+
+def home_sections(html_text):
+    """Делит home.md по заголовкам H2 на отдельные секции главной."""
+    parts = re.split(r"(?=<h2)", html_text)
+    out = []
+    for part in parts:
+        if not part.strip():
+            continue
+        m = re.match(r'<h2(?: id="([^"]+)")?>', part)
+        sid = m.group(1) if m else ""
+        cls = {"uslugi": "services", "obo-mne": "about"}.get(sid, "plain")
+        if sid:
+            part = part.replace(f' id="{sid}"', "", 1)
+        id_attr = f' id="{sid}"' if sid else ""
+        out.append(f'<section class="block {cls}"{id_attr}><div class="wrap">{part}</div></section>')
+    return "\n".join(out)
 
 
 def render_index(items):
     about = ""
     about_file = CONTENT / "pages" / "home.md"
     if about_file.exists():
-        about = markdown.markdown(about_file.read_text(encoding="utf-8"), extensions=["extra"])
+        about = home_sections(markdown.markdown(about_file.read_text(encoding="utf-8"), extensions=["extra"]))
     person = {
         "@context": "https://schema.org",
         "@type": "Person",
         "name": SITE["author"],
         "jobTitle": SITE["author_role"],
         "url": BASE + "/",
+        **({"image": BASE + PORTRAIT} if PORTRAIT else {}),
         "address": {"@type": "PostalAddress", "addressLocality": SITE["city"], "addressCountry": "RU"},
         "sameAs": [u for u in (SITE.get("instagram"), SITE.get("club_trainer_url")) if not placeholder(u)],
         "hasCredential": SITE.get("credentials", []),
@@ -233,15 +285,38 @@ def render_index(items):
     }
     extra = f'<script type="application/ld+json">{json.dumps(person, ensure_ascii=False)}</script>'
     title = f"{SITE['author']} — {SITE['author_role']} в {SITE['city']}е"
-    page = head(title, SITE["tagline"], "/", extra)
-    page += f"""<section class="hero">
-<h1>{esc(SITE["author"])}</h1>
-<p class="lead">{esc(SITE["author_role"].capitalize())}, {esc(SITE["club"])}, {esc(SITE["city"])}.</p>
-<p>{esc(SITE["tagline"])}</p>
+    first, last = SITE["author"].split(" ", 1)
+    stats = "".join(
+        f'<li class="stat reveal"><b>{esc(s["value"])}</b><span>{esc(s["label"])}</span></li>'
+        for s in SITE.get("stats", [])
+    )
+    articles = ""
+    if items:
+        articles = (f'<section class="block" id="stati"><div class="wrap"><div class="block-head">'
+                    f'<h2>Новые статьи</h2><a class="link-more" href="/stati/">Все статьи →</a></div>'
+                    f'{article_list(items[:6])}</div></section>')
+    page = head(title, SITE["tagline"], "/", extra, PORTRAIT or None)
+    page += f"""<section class="hero"><div class="wrap hero-grid">
+<div class="hero-text">
+<p class="kicker">{esc(SITE["author_role"].capitalize())} · {esc(SITE["city"])}</p>
+<h1><span>{esc(first)}</span> <span class="accent">{esc(last)}</span></h1>
+<p class="lead">{esc(SITE["tagline"])}</p>
+<p class="club">{esc(SITE["club"])}</p>
+<div class="actions"><a class="btn btn-primary" href="/#kontakty">Контакты</a><a class="btn btn-ghost" href="/stati/">Читать статьи</a></div>
+</div>
+<div class="hero-photo">
+{portrait("photo", 960, 1280, eager=True)}
+<span class="sticker">Мастер спорта России</span>
+</div>
+</div>
+{f'<div class="wrap"><ul class="stats">{stats}</ul></div>' if stats else ""}
 </section>
 {about}
-<section id="kontakty"><h2>Контакты</h2>{contacts_html()}</section>
-<section><h2>Новые статьи</h2>{article_list(items[:6])}<p><a href="/stati/">Все статьи</a></p></section>
+<section class="block contacts-block" id="kontakty"><div class="wrap">
+<h2>Контакты</h2>
+{contacts_html()}
+</div></section>
+{articles}
 """
     page += foot()
     (OUT / "index.html").write_text(page, encoding="utf-8")
@@ -251,7 +326,11 @@ def render_list(items):
     page = head(f"Статьи о тренировках и питании — {SITE['author']}",
                 "Статьи о силовых тренировках, технике упражнений и питании на основе исследований.",
                 "/stati/")
-    page += f"<h1>Статьи</h1>{article_list(items)}"
+    empty = '<p class="muted">Статьи скоро появятся.</p>' if not items else ""
+    page += (f'<section class="block page-head"><div class="wrap"><p class="kicker">Блог тренера</p>'
+             f'<h1>Статьи</h1><p class="lead">Силовые тренировки, техника упражнений и питание. '
+             f'Каждая статья опирается на исследования, ссылки в конце.</p>'
+             f'{article_list(items)}{empty}</div></section>')
     page += foot()
     (OUT / "stati").mkdir(parents=True, exist_ok=True)
     (OUT / "stati" / "index.html").write_text(page, encoding="utf-8")
@@ -270,7 +349,9 @@ def render_sitemap(paths):
 
 def render_404():
     page = head("Страница не найдена", "Такой страницы нет.", "/404.html")
-    page += '<h1>Такой страницы нет</h1><p><a href="/stati/">Все статьи</a></p>'
+    page += ('<section class="block page-head"><div class="wrap"><p class="kicker">Ошибка 404</p>'
+             '<h1>Такой страницы нет</h1><p><a class="btn btn-primary" href="/stati/">Все статьи</a></p>'
+             '</div></section>')
     page += foot()
     (OUT / "404.html").write_text(page, encoding="utf-8")
 
