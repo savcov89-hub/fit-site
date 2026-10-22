@@ -1,0 +1,75 @@
+name: write-article
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 10:00 по Новосибирску, каждый день
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Запрос для статьи (пусто — следующий из agent/topics.csv)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: write-article
+  cancel-in-progress: false
+
+jobs:
+  write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Написать статью
+        id: art
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          MODEL: ${{ vars.MODEL || 'claude-opus-5-5' }}
+          MONTH_LIMIT_USD: ${{ vars.MONTH_LIMIT_USD || '25' }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          if [ -n "$TOPIC" ]; then
+            python3 agent/write_article.py --topic "$TOPIC"
+          else
+            python3 agent/write_article.py
+          fi
+
+      - name: Проверить, что сайт собирается
+        run: python3 build.py
+
+      - name: Отправить на проверку или опубликовать
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH }}
+          SLUG: ${{ steps.art.outputs.slug }}
+          TITLE: ${{ steps.art.outputs.title }}
+          USD: ${{ steps.art.outputs.usd }}
+          WORDS: ${{ steps.art.outputs.words }}
+        run: |
+          git config user.name "seo-agent"
+          git config user.email "seo-agent@users.noreply.github.com"
+          if [ "$AUTO_PUBLISH" = "true" ]; then
+            git add content/articles static/img agent/topics.csv agent/usage.csv
+            git commit -m "Статья: $TITLE"
+            git push origin HEAD:main
+          else
+            BR="article/$SLUG"
+            git checkout -b "$BR"
+            git add content/articles static/img agent/topics.csv agent/usage.csv
+            git commit -m "Статья: $TITLE"
+            git push -u origin "$BR"
+            gh pr create --base main --head "$BR" --title "Статья: $TITLE" --body "$(printf '%s\n\n%s\n%s\n\n%s' \
+              "Новая статья на проверку: \`content/articles/$SLUG.md\`, $WORDS слов, стоимость \$$USD." \
+              "Предпросмотр: Cloudflare Pages добавит ссылку на превью в этот запрос через минуту-две." \
+              "Ок — нажмите Merge, статья выйдет на сайте. Не подходит — Close." \
+              "Правки можно внести прямо в файл в этой ветке.")"
+          fi
