@@ -18,6 +18,11 @@
 1. **Cloudflare.** dash.cloudflare.com → Workers & Pages → Create → Import a repository → `fit-site`.
    Имя проекта: `fit-site` (должно совпадать с `name` в `wrangler.jsonc`). Build command: `pip install -r requirements.txt && python3 build.py`. Deploy command: `npx wrangler deploy` (по умолчанию). Сайт раздаётся из `public/` по настройкам `wrangler.jsonc`.
    Адрес вида `fit-site.<аккаунт>.workers.dev` записать в `site.json` → `base_url`. Свой домен: проект → Settings → Domains & Routes.
+1а. **Yandex Object Storage (основной хостинг для России).** Cloudflare часть российских провайдеров режет, поэтому сайт выкладывается в бакет Яндекса workflow `deploy` (после каждого пуша в main и после автопубликации статьи).
+   - console.yandex.cloud → Object Storage → Создать бакет. Имя бакета = домен (`example.ru`), доступ на чтение объектов — публичный. В бакете: Веб-сайт → Хостинг, главная страница `index.html`, страница ошибки `404.html`.
+   - Сервисный аккаунт с ролью `storage.editor` → Создать статический ключ доступа. ID ключа → секрет `YC_ACCESS_KEY_ID`, секретный ключ → секрет `YC_SECRET_ACCESS_KEY`, имя бакета → переменная `YC_BUCKET`.
+   - Домен: у регистратора DNS-серверы `ns1.yandexcloud.net` и `ns2.yandexcloud.net`; в Cloud DNS зона домена и запись ANAME на `<бакет>.website.yandexcloud.net`. HTTPS: Certificate Manager → сертификат Let's Encrypt → привязать к бакету (Безопасность → HTTPS).
+   - В `site.json` → `base_url` поставить `https://<домен>`.
 2. **Ключ Claude API.** platform.claude.com → API Keys → Create key. Положить в GitHub: Settings → Secrets and variables → Actions → New repository secret, имя `ANTHROPIC_API_KEY`. В консоли Anthropic стоит поставить лимит расходов: Settings → Limits.
 3. **Разрешить агенту создавать запросы на проверку.** Settings → Actions → General → Workflow permissions → Read and write permissions и галочка «Allow GitHub Actions to create and approve pull requests».
 4. **Поисковики.** Яндекс Вебмастер и Google Search Console: добавить сайт, код подтверждения вписать в `site.json` (`yandex_verification`, `google_verification`), затем отправить `https://<адрес>/sitemap.xml`. Яндекс Метрика — номер счётчика в `yandex_metrika_id`.
@@ -35,6 +40,7 @@
 | `RESEARCH_MODEL` | модель для поиска источников | `claude-haiku-5-5` |
 | `MONTH_LIMIT_USD` | потолок расходов в месяц | `25` |
 | `AUTO_PUBLISH` | `true` — публиковать без проверки | проверка включена |
+| `YC_BUCKET` | имя бакета Yandex Object Storage; пусто — выкладка в Яндекс выключена | пусто |
 
 ## Темы
 
