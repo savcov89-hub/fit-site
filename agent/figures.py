@@ -199,14 +199,22 @@ def draw_compare(f):
     n = len(items)
     gap = 16
     cw = (640 - 64 - gap * (n - 1)) / n
-    chars = int(cw / 9.6)
+    # ширина символа: заголовок ~13 px, подпись ~10.5 px
+    head_chars = int((cw - 32) / 13)
+    note_chars = int((cw - 48) / 10.5)
     cols, hmax = [], 0
     for k, i in enumerate(items):
         x = 32 + k * (cw + gap)
-        body = [text(x + 16, y + 34, wrap(i["label"], chars - 2)[0], "t")]
-        yy = y + 66
+        body, yy = [], y + 34
+        # длинное слово не влезает в колонку — уменьшаем шрифт заголовка
+        longest = max(len(w) for w in str(i["label"]).split() or [""])
+        size = max(15, min(21, int((cw - 32) / max(longest, 1) / 0.58)))
+        for line in wrap(i["label"], max(head_chars, longest)):
+            body.append(text(x + 16, yy, line, "t").replace("<text ", f'<text style="font-size:{size}px" ', 1))
+            yy += 26
+        yy += 6
         for point in [p.strip() for p in i["note"].split("|") if p.strip()][:4]:
-            lines = wrap(point, chars - 4)
+            lines = wrap(point, note_chars)
             body.append(f'<circle class="dot" cx="{x + 20:.0f}" cy="{yy - 6:.0f}" r="4"/>')
             for line in lines:
                 body.append(text(x + 32, yy, line))
@@ -348,7 +356,10 @@ def add(client, meter, create, model, body, slug, img_dir, url_prefix):
         return body, 0
     figs = plan(client, meter, create, model, body, todo)
     n = 0
-    for k, f in enumerate(figs, 1):
+    # при повторном запуске номера продолжаются, чтобы не затереть старые картинки
+    used = [int(p.name[:2]) for p in img_dir.glob("[0-9][0-9]-*.svg")] if img_dir.exists() else []
+    start = max(used, default=0)
+    for k, f in enumerate(figs, start + 1):
         if f["heading"] not in todo or not usable(f):
             continue
         name = f"{k:02d}-{f['kind']}.svg"
