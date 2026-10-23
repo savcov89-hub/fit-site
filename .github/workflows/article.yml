@@ -34,6 +34,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           MODEL: ${{ vars.MODEL || 'claude-opus-5-5' }}
+          RESEARCH_MODEL: ${{ vars.RESEARCH_MODEL || 'claude-haiku-5-5' }}
+          REPORT_FILE: ${{ runner.temp }}/pr_body.md
           MONTH_LIMIT_USD: ${{ vars.MONTH_LIMIT_USD || '25' }}
           TOPIC: ${{ inputs.topic }}
         run: |
@@ -52,8 +54,7 @@ jobs:
           AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH }}
           SLUG: ${{ steps.art.outputs.slug }}
           TITLE: ${{ steps.art.outputs.title }}
-          USD: ${{ steps.art.outputs.usd }}
-          WORDS: ${{ steps.art.outputs.words }}
+          REPORT_FILE: ${{ runner.temp }}/pr_body.md
         run: |
           git config user.name "seo-agent"
           git config user.email "seo-agent@users.noreply.github.com"
@@ -67,9 +68,5 @@ jobs:
             git add content/articles static/img agent/topics.csv agent/usage.csv
             git commit -m "Статья: $TITLE"
             git push -u origin "$BR"
-            gh pr create --base main --head "$BR" --title "Статья: $TITLE" --body "$(printf '%s\n\n%s\n%s\n\n%s' \
-              "Новая статья на проверку: \`content/articles/$SLUG.md\`, $WORDS слов, стоимость \$$USD." \
-              "Предпросмотр: Cloudflare Pages добавит ссылку на превью в этот запрос через минуту-две." \
-              "Ок — нажмите Merge, статья выйдет на сайте. Не подходит — Close." \
-              "Правки можно внести прямо в файл в этой ветке.")"
+            gh pr create --base main --head "$BR" --title "Статья: $TITLE" --body-file "$REPORT_FILE"
           fi

@@ -233,3 +233,8 @@ details p{margin:0;padding:0 20px 18px;font-size:.98rem}
   .sticker{box-shadow:0 12px 30px rgba(18,18,20,.18)}
   .avatar img{border-color:var(--fg)}
 }
+
+/* схемы к шагам техники */
+.step{margin:1.2rem 0 1.4rem;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 8px 10px}
+.step img{display:block;width:100%;height:auto}
+.step figcaption{font-size:.85rem;color:var(--muted);margin:4px 6px 0}
