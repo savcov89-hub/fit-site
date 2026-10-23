@@ -1,0 +1,43 @@
+name: publish-site
+
+# Собирает сайт и кладёт готовые файлы (public/) в ветку `site`.
+# Хостинг (Timeweb App Platform) берёт сайт из этой ветки без своей сборки.
+on:
+  push:
+    branches: [main]
+  # Пуш статьи из write-article идёт через GITHUB_TOKEN и не запускает push-триггер.
+  workflow_run:
+    workflows: [write-article]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python3 build.py
+
+      - name: Выложить public/ в ветку site
+        run: |
+          cd public
+          git init -q -b site
+          git config user.name "site-publisher"
+          git config user.email "site-publisher@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Сайт из ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" site
