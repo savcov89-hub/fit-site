@@ -22,6 +22,12 @@
 3. **Разрешить агенту создавать запросы на проверку.** Settings → Actions → General → Workflow permissions → Read and write permissions и галочка «Allow GitHub Actions to create and approve pull requests».
 4. **Поисковики.** Яндекс Вебмастер и Google Search Console: добавить сайт, код подтверждения вписать в `site.json` (`yandex_verification`, `google_verification`), затем отправить `https://<адрес>/sitemap.xml`. Яндекс Метрика — номер счётчика в `yandex_metrika_id`.
 
+## Картинки в статьях
+
+Под каждым подзаголовком статьи стоит SVG-картинка. Opus описывает, что показать (поза скелета с работающими мышцами, график, диапазон, сравнение, чек-лист, шаги), а рисует `agent/figures.py` на общем наборе `agent/svgkit.py`, поэтому стиль у всех картинок один, а тёмная тема работает сама. Файлы лежат в `static/img/<slug>/`. Это добавляет к статье примерно $0,1.
+
+К уже вышедшим статьям картинки дорисовывает workflow **add-figures** (Actions → add-figures → Run workflow; пустой slug — все статьи, где их не хватает). Схемы к статье про присед нарисованы вручную: `tools/squat_svg.py`.
+
 ## Фото в статьях
 
 1. **Свои фото — лучший вариант**: и для доверия, и для поиска по картинкам. Кладите их в `content/photos/` и описывайте одной строкой в `content/photos/photos.csv` (подробно в `content/photos/README.md`). Подойдут стоп-кадры из Reels. Агент сам выбирает фото по теме для обложки и для текста.
