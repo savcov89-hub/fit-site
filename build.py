@@ -126,8 +126,6 @@ els.forEach(function(e){{io.observe(e)}})}})();
 
 def contacts_html():
     rows = []
-    if not placeholder(SITE.get("telegram")):
-        rows.append(("Telegram", f'<a href="{esc(SITE["telegram"])}">{esc(SITE["telegram"])}</a>'))
     if not placeholder(SITE.get("phone")):
         rows.append(("Телефон", f'<a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["phone"]))}">{esc(SITE["phone"])}</a>'))
     if not placeholder(SITE.get("instagram")):
@@ -145,6 +143,22 @@ def contacts_html():
     return "<ul class=\"contacts\">" + "".join(
         f"<li><span class=\"label\">{label}</span><span>{value}</span></li>" for label, value in rows
     ) + "</ul>"
+
+
+def messengers_html():
+    """Кнопки связи: звонок и мессенджеры. Пустые и [заглушки] пропускаются."""
+    links = []
+    if not placeholder(SITE.get("phone")):
+        links.append(("btn-primary", f'tel:{re.sub(r"[^+0-9]", "", SITE["phone"])}', "Позвонить"))
+    for key, name in (("telegram", "Telegram"), ("whatsapp", "WhatsApp"), ("max", "Max")):
+        if not placeholder(SITE.get(key)):
+            links.append(("btn-ghost", SITE[key], name))
+    if not links:
+        return ""
+    return '<div class="actions messengers">' + "".join(
+        f'<a class="btn {cls}" href="{esc(url)}"{"" if url.startswith("tel:") else " rel=\"noopener\""}>{label}</a>'
+        for cls, url, label in links
+    ) + "</div>"
 
 
 def load_articles():
@@ -279,6 +293,7 @@ def render_index(items):
         "jobTitle": SITE["author_role"],
         "url": BASE + "/",
         **({"image": BASE + PORTRAIT} if PORTRAIT else {}),
+        **({"telephone": SITE["phone"]} if not placeholder(SITE.get("phone")) else {}),
         "address": {"@type": "PostalAddress", "addressLocality": SITE["city"], "addressCountry": "RU"},
         "sameAs": [u for u in (SITE.get("instagram"), SITE.get("club_trainer_url")) if not placeholder(u)],
         "hasCredential": SITE.get("credentials", []),
@@ -315,6 +330,7 @@ def render_index(items):
 {about}
 <section class="block contacts-block" id="kontakty"><div class="wrap">
 <h2>Контакты</h2>
+{messengers_html()}
 {contacts_html()}
 </div></section>
 {articles}

@@ -93,6 +93,7 @@ strong,b{color:var(--fg);font-weight:700}
 
 /* контакты */
 .contacts-block{background:var(--bg2)}
+.messengers{margin:0 0 24px}
 .contacts{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .contacts li{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;display:flex;flex-direction:column;gap:4px;font-weight:600;color:var(--fg);word-break:break-word}
 .contacts .label{font-size:.75rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
@@ -213,6 +214,7 @@ details p{margin:0;padding:0 20px 18px;font-size:.98rem}
   .sticker{left:12px;bottom:20px;font-size:.75rem;padding:8px 12px}
   .hero h1{font-size:clamp(2.7rem,14vw,4rem);margin:.25em 0 .3em}
   .actions .btn{flex:1 1 auto}
+  .messengers .btn{flex:1 1 40%}
   .stats{margin-top:36px;gap:10px}
   .stat{padding:16px 14px}
   .stat span{font-size:.8rem}
