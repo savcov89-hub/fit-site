@@ -70,3 +70,10 @@ jobs:
             git push -u origin "$BR"
             gh pr create --base main --head "$BR" --title "Статья: $TITLE" --body-file "$REPORT_FILE"
           fi
+
+  # Пуш из Actions через GITHUB_TOKEN не запускает deploy по push, поэтому зовём его явно
+  deploy:
+    needs: write
+    if: vars.AUTO_PUBLISH == 'true'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
