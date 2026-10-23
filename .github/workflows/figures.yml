@@ -1,0 +1,49 @@
+name: add-figures
+
+# Дорисовать SVG-картинки к вышедшим статьям (под каждый подзаголовок без картинки)
+on:
+  workflow_dispatch:
+    inputs:
+      slug:
+        description: "slug статьи (пусто — все, где не хватает картинок)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: write-article
+  cancel-in-progress: false
+
+jobs:
+  figures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Нарисовать картинки
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODEL: ${{ vars.MODEL || 'claude-opus-5-5' }}
+          MONTH_LIMIT_USD: ${{ vars.MONTH_LIMIT_USD || '25' }}
+          SLUG: ${{ inputs.slug }}
+        run: |
+          if [ -n "$SLUG" ]; then
+            python3 agent/add_figures.py --slug "$SLUG"
+          else
+            python3 agent/add_figures.py
+          fi
+      - name: Проверить, что сайт собирается
+        run: python3 build.py
+      - name: Опубликовать
+        run: |
+          git config user.name "seo-agent"
+          git config user.email "seo-agent@users.noreply.github.com"
+          git add content/articles static/img agent/usage.csv
+          git diff --cached --quiet && { echo "Нечего добавлять"; exit 0; }
+          git commit -m "Картинки к статьям"
+          git push origin HEAD:main

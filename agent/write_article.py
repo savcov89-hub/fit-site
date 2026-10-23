@@ -26,6 +26,7 @@ import urllib.request
 
 import anthropic
 
+import figures
 import seo
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -120,13 +121,13 @@ def month_spend():
         return sum(float(r["usd"]) for r in csv.DictReader(f) if r["date"].startswith(month))
 
 
-def log_usage(keyword, usd, tokens_in, tokens_out, searches):
+def log_usage(keyword, usd, tokens_in, tokens_out, searches, model=None):
     new = not USAGE.exists()
     with USAGE.open("a", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         if new:
             w.writerow(["date", "keyword", "model", "tokens_in", "tokens_out", "searches", "usd"])
-        w.writerow([dt.date.today().isoformat(), keyword, f"{RESEARCH_MODEL}+{MODEL}", tokens_in,
+        w.writerow([dt.date.today().isoformat(), keyword, model or f"{RESEARCH_MODEL}+{MODEL}", tokens_in,
                     tokens_out, searches, f"{usd:.4f}"])
 
 
@@ -338,6 +339,16 @@ def main():
     if "image" in meta:
         meta["image_alt"] = cover["alt"]
 
+    # картинки под подзаголовками: модель описывает, svgkit рисует
+    try:
+        art["body_markdown"], n_fig = figures.add(client, meter, create, MODEL, art["body_markdown"], slug,
+                                                  ROOT / "static" / "img" / slug, f"/img/{slug}")
+    except Exception as e:  # статья важнее картинок
+        print(f"Картинки не получились: {e}")
+        n_fig = 0
+    n_head = len(figures.headings(art["body_markdown"]))
+    report += f"\n- картинок: {n_fig} из {n_head} подзаголовков"
+
     ARTICLES.mkdir(parents=True, exist_ok=True)
     out = ARTICLES / f"{slug}.md"
     out.write_text("---\n" + json.dumps(meta, ensure_ascii=False, indent=2) + "\n---\n"
@@ -348,7 +359,7 @@ def main():
     usd = meter.usd()
     log_usage(keyword, usd, meter.tin, meter.tout, meter.searches)
 
-    words = len(art["body_markdown"].split())
+    words = len(re.sub(r"<figure.*?</figure>", "", art["body_markdown"], flags=re.S).split())
     print(f"Статья: {out.relative_to(ROOT)} ({words} слов), стоимость ${usd:.3f}, "
           f"за месяц ${spent + usd:.2f} из ${MONTH_LIMIT_USD:.2f}")
     report_file = os.environ.get("REPORT_FILE")
