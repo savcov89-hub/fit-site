@@ -87,9 +87,7 @@ def head(title, description, path, extra="", image=None):
 {f'<meta property="og:image" content="{BASE}{esc(image)}">' if image else ""}
 <meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap">
+<link rel="preload" href="/fonts/montserrat-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 <script>document.documentElement.classList.add("js")</script>
 {verif}{extra}{metrika}
@@ -107,12 +105,12 @@ def foot():
     year = dt.date.today().year
     insta = ""
     if not placeholder(SITE.get("instagram")):
-        insta = f'<a href="{esc(SITE["instagram"])}" rel="noopener">Instagram @fitness_savtsov</a>'
+        insta = f'<a href="{esc(SITE["instagram"])}" rel="noopener">Instagram* @fitness_savtsov</a>'
     return f"""</main>
 <footer class="bottom"><div class="wrap">
 <div class="foot-brand"><span class="mark">МС</span><div><b>{esc(SITE["author"])}</b><br>{esc(SITE["author_role"].capitalize())}, {esc(SITE["club"])}, {esc(SITE["city"])}</div></div>
 <nav class="foot-nav"><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a href="/#kontakty">Контакты</a>{insta}</nav>
-<p class="muted">© {year} {esc(SITE["author"])}. Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.</p>
+<p class="muted">© {year} {esc(SITE["author"])}. Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.{META_NOTE if insta else ""}</p>
 </div></footer>
 <script>
 (function(){{var els=document.querySelectorAll(".reveal");if(!("IntersectionObserver" in window)){{els.forEach(function(e){{e.classList.add("in")}});return}}
@@ -124,12 +122,15 @@ els.forEach(function(e){{io.observe(e)}})}})();
 """
 
 
+META_NOTE = " *Instagram принадлежит компании Meta, признанной в России экстремистской и запрещённой."
+
+
 def contacts_html():
     rows = []
     if not placeholder(SITE.get("phone")):
         rows.append(("Телефон", f'<a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["phone"]))}">{esc(SITE["phone"])}</a>'))
     if not placeholder(SITE.get("instagram")):
-        rows.append(("Instagram", f'<a href="{esc(SITE["instagram"])}" rel="noopener">@fitness_savtsov</a>'))
+        rows.append(("Instagram*", f'<a href="{esc(SITE["instagram"])}" rel="noopener">@fitness_savtsov</a>'))
     place = SITE["club"]
     if not placeholder(SITE.get("address")):
         place += f", {SITE['address']}"
@@ -150,7 +151,8 @@ def messengers_html():
     links = []
     if not placeholder(SITE.get("phone")):
         links.append(("btn-primary", f'tel:{re.sub(r"[^+0-9]", "", SITE["phone"])}', "Позвонить"))
-    for key, name in (("telegram", "Telegram"), ("whatsapp", "WhatsApp"), ("max", "Max")):
+    # WhatsApp последним: с февраля 2026 в России открывается в основном через VPN
+    for key, name in (("telegram", "Telegram"), ("max", "Max"), ("whatsapp", "WhatsApp")):
         if not placeholder(SITE.get(key)):
             links.append(("btn-ghost", SITE[key], name))
     if not links:
@@ -159,6 +161,31 @@ def messengers_html():
         f'<a class="btn {cls}" href="{esc(url)}"{"" if url.startswith("tel:") else " rel=\"noopener\""}>{label}</a>'
         for cls, url, label in links
     ) + "</div>"
+
+
+def reviews_html():
+    """Отзывы клиентов из site.json (reviews: name, text, необязательно goal). Пусто — блока нет."""
+    items = [r for r in SITE.get("reviews", []) if r.get("text") and not placeholder(r["text"])]
+    if not items:
+        return ""
+    cards = "".join(
+        f'<li class="review reveal"><p>{esc(r["text"])}</p>'
+        f'<span class="review-who"><b>{esc(r.get("name", ""))}</b>'
+        f'{" · " + esc(r["goal"]) if r.get("goal") else ""}</span></li>'
+        for r in items
+    )
+    return (f'<section class="block reviews" id="otzyvy"><div class="wrap"><h2>Отзывы</h2>'
+            f'<ul class="review-list">{cards}</ul></div></section>')
+
+
+def cta_html():
+    """Блок связи в конце статьи: где тренирую и кнопки мессенджеров."""
+    buttons = messengers_html()
+    if not buttons:
+        return ""
+    return (f'<aside class="cta-box"><p class="cta-title">Разберём на тренировке</p>'
+            f'<p>Тренирую в {esc(SITE["club"])}, {esc(SITE["city"])}. Если хотите поставить технику '
+            f'или собрать программу под свою цель, напишите или позвоните.</p>{buttons}</aside>')
 
 
 def load_articles():
@@ -242,6 +269,7 @@ def render_article(a, all_articles):
 </div>
 {faq}
 {sources}
+{cta_html()}
 <aside class="author-box">{portrait("avatar", 240, 240, small=True)}<p><b>{esc(SITE["author"])}</b> — {esc(SITE["author_role"])} в {esc(SITE["club"])}, {esc(SITE["city"])}. {esc(". ".join(SITE.get("credentials", [])))}. <a href="/#obo-mne">Подробнее об авторе</a></p></aside>
 {rel_html}
 </article>
@@ -318,7 +346,7 @@ def render_index(items):
 <h1><span>{esc(first)}</span> <span class="accent">{esc(last)}</span></h1>
 <p class="lead">{esc(SITE["tagline"])}</p>
 <p class="club">{esc(SITE["club"])}</p>
-<div class="actions"><a class="btn btn-primary" href="/#kontakty">Контакты</a><a class="btn btn-ghost" href="/stati/">Читать статьи</a></div>
+<div class="actions"><a class="btn btn-primary" href="/#kontakty">Записаться на тренировку</a><a class="btn btn-ghost" href="/stati/">Читать статьи</a></div>
 </div>
 <div class="hero-photo">
 {portrait("photo", 960, 1280, eager=True)}
@@ -328,6 +356,7 @@ def render_index(items):
 {f'<div class="wrap"><ul class="stats">{stats}</ul></div>' if stats else ""}
 </section>
 {about}
+{reviews_html()}
 <section class="block contacts-block" id="kontakty"><div class="wrap">
 <h2>Контакты</h2>
 {messengers_html()}

@@ -56,6 +56,7 @@
 ## Править руками
 
 - Главная: `content/pages/home.md` и `site.json`.
+- Отзывы на главной: `site.json` → `reviews`, список вида `{"name": "Анна", "goal": "минус 6 кг за 4 месяца", "text": "..."}`. Пустой список — блока нет. Только настоящие отзывы с согласия клиента.
 - Статья: `content/articles/<slug>.md`. Сверху JSON с заголовком, описанием, FAQ и источниками, ниже текст в Markdown. Скрыть статью: `"draft": true`.
 - Проверить сборку локально: `pip install -r requirements.txt && python3 build.py`, сайт появится в `public/`.
 
