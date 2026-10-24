@@ -252,7 +252,7 @@ HEADS = {
                 '<path class="lead" style="stroke:#7d776b;stroke-width:2;stroke-linecap:round" d="M8 8Q13 11 17 6"/>'
                 '<circle cx="3" cy="5" r="3.2" fill="#d2491d" fill-opacity=".25"/>'),
 }
-HEAD = "skull"
+HEAD = "muscle"
 
 
 def head(c, fwd, up, variant=None):
@@ -303,7 +303,11 @@ HEADS_FRONT.update({
     "skull2": HEADS_FRONT["skull"],
     "profile": '<ellipse class="bone" cx="0" cy="-1" rx="16" ry="20"/>',
     "ball": '<circle class="bone" cx="0" cy="-1" r="19"/>',
-    "muscle": HEADS_FRONT["skull"],
+    "muscle": ('<ellipse class="bone" cx="0" cy="-1" rx="17" ry="20"/>'
+               '<path class="m" d="M-15 -4C-15 -12 -9 -17 -4 -17C-6 -12 -8 -8 -12 -2Z"/>'
+               '<path class="m" d="M15 -4C15 -12 9 -17 4 -17C6 -12 8 -8 12 -2Z"/>'
+               '<path class="m" d="M-13 4L-8 3L-7 13L-11 11Z"/><path class="m" d="M13 4L8 3L7 13L11 11Z"/>'
+               '<ellipse cx="-6" cy="-1" rx="3.4" ry="3.8" fill="#7d776b"/><ellipse cx="6" cy="-1" rx="3.4" ry="3.8" fill="#7d776b"/>'),
 })
 
 
