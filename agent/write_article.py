@@ -1,7 +1,8 @@
 """Пишет одну SEO-статью по следующей теме из agent/topics.csv.
 
 Шаг 1: дешёвая модель (RESEARCH_MODEL) ищет источники в интернете и собирает выжимку фактов.
-Шаг 2: основная модель (MODEL) пишет статью по выжимке, правилам agent/style.md и agent/seo.md,
+Шаг 2: основная модель (MODEL) пишет статью по выжимке, правилам agent/style.md, agent/seo.md
+       и местному контексту agent/local.md,
        ответ — строгий JSON.
 Шаг 3: SEO-проверка (agent/seo.py); найденные проблемы правит короткий вызов редактора,
        остальное попадает в отчёт для PR.
@@ -205,12 +206,14 @@ def research(client, meter, keyword, related):
 def write(client, meter, keyword, related, notes, existing, photos):
     style = (AGENT / "style.md").read_text(encoding="utf-8")
     seo_rules = (AGENT / "seo.md").read_text(encoding="utf-8")
+    local = (AGENT / "local.md").read_text(encoding="utf-8")
     rel = "\n".join(f"- {q}" for q in related) or "(нет)"
     links = "\n".join(f"- {a['title']}: /stati/{a['slug']}/" for a in existing) or "(пока статей нет)"
     photo_list = "\n".join(f"- {p['file']}: {p['description']}" for p in photos) or "(пока фото нет)"
     system = (
         "Ты пишешь статьи для личного сайта персонального тренера Михаила Савцова. "
         "Статья выходит от его имени. Следуй правилам ниже строго.\n\n" + style + "\n\n" + seo_rules
+        + "\n\n" + local
     )
     user = (
         f"Главный поисковый запрос: «{keyword}».\n"

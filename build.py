@@ -56,6 +56,15 @@ def portrait(cls, width, height, eager=False, small=False):
             f'width="{width}" height="{height}" {loading} decoding="async"></picture>')
 
 
+def logo_mark():
+    """Значок у имени в шапке и подвале: фото лица, без портрета — буквы МС."""
+    if not PORTRAIT:
+        return '<span class="mark">МС</span>'
+    stem = PORTRAIT.rsplit(".", 1)[0] + "-face"
+    return (f'<picture class="mark mark-photo"><source srcset="{esc(stem)}.webp" type="image/webp">'
+            f'<img src="{esc(stem)}.jpg" alt="" width="80" height="80" decoding="async"></picture>')
+
+
 def head(title, description, path, extra="", image=None):
     verif = ""
     if SITE.get("yandex_verification"):
@@ -99,7 +108,7 @@ def head(title, description, path, extra="", image=None):
 </head>
 <body>
 <header class="top"><div class="wrap">
-<a class="logo" href="/" aria-label="{esc(SITE["author"])}, на главную"><span class="mark">МС</span><span class="logo-name">{esc(SITE["author"])}</span></a>
+<a class="logo" href="/" aria-label="{esc(SITE["author"])}, на главную">{logo_mark()}<span class="logo-name">{esc(SITE["author"])}</span></a>
 <nav><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a class="nav-cta" href="/#kontakty">Контакты</a></nav>
 </div></header>
 <main>
@@ -113,7 +122,7 @@ def foot():
         insta = f'<a href="{esc(SITE["instagram"])}" rel="noopener">Instagram* @fitness_savtsov</a>'
     return f"""</main>
 <footer class="bottom"><div class="wrap">
-<div class="foot-brand"><span class="mark">МС</span><div><b>{esc(SITE["author"])}</b><br>{esc(SITE["author_role"].capitalize())}, {esc(SITE["club"])}, {esc(SITE["city"])}</div></div>
+<div class="foot-brand">{logo_mark()}<div><b>{esc(SITE["author"])}</b><br>{esc(SITE["author_role"].capitalize())}, {esc(SITE["club"])}, {esc(SITE["city"])}</div></div>
 <nav class="foot-nav"><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a href="/#kontakty">Контакты</a>{insta}</nav>
 <p class="muted">© {year} {esc(SITE["author"])}. Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.{META_NOTE if insta else ""}</p>
 </div></footer>
