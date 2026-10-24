@@ -173,12 +173,8 @@ def figure(P, on=(), ghost=False):
     # трапеция и верх спины, дельта
     g.append(shape(T, [(0.72, -9.2), (0.92, -11.4), (1.06, -10), (1.14, -5.8), (1.04, -5.2), (0.86, -7.6)], m("traps")))
     # голова
-    hc = scr(T(1.3, -3.5))
-    g.append(f'<circle class="bone" cx="{hc[0]:.1f}" cy="{hc[1]:.1f}" r="20"/>')
-    jw = [T(1.22, 1), T(1.18, 7), T(1.25, 9.5), T(1.31, 8)]
-    g.append('<path class="bone" d="M' + "L".join(f"{scr(p)[0]:.1f} {scr(p)[1]:.1f}" for p in jw) + 'Z"/>')
-    eye = scr(T(1.33, 2.5))
-    g.append(f'<circle cx="{eye[0]:.1f}" cy="{eye[1]:.1f}" r="4.5" fill="#7d776b"/>')
+    a, o, b = scr(T(1.3, 0)), scr(T(1.2, 0)), scr(T(1.3, 1))
+    g.append(head(scr(T(1.3, -3.5)), norm((b[0] - a[0], b[1] - a[1])), norm((a[0] - o[0], a[1] - o[1]))))
     # рука: дельта, плечо, предплечье
     J, E, Hd = P["joint"], P["elbow"], P["hand"]
     UA = frame(E, J)
@@ -235,3 +231,88 @@ def svg(path, title, body, h=H):
 
 def esc(s):
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+# Голова сбоку. Координаты головы: x — вперёд (к лицу), y — вниз, радиус черепа около 20 px.
+HEADS = {
+    # череп: гладкий свод, скула и аккуратная нижняя челюсть одним контуром
+    "skull": ('<path class="bone" d="M-18 6C-23 -6 -16 -21 0 -21C14 -21 21 -12 20 -1C20 2 21 4 22 6'
+              'C22 8 20 9 19 9C19 12 17 14 14 14C11 17 6 18 2 16C-3 15 -6 12 -8 9C-13 9 -16 8 -18 6Z"/>'
+              '<ellipse cx="9" cy="-1" rx="4.6" ry="5.2" fill="#7d776b"/>'
+              '<path class="lead" style="stroke:#7d776b" d="M-1 9Q6 12 14 10M5 12.5v3M9 12v3"/>'),
+    # голова-манекен: ровное «яйцо», лёгкий нос, ухо, без лица
+    "mannequin": ('<path class="bone" d="M-17 4C-20 -10 -11 -21 2 -21C14 -21 20 -12 19 -3L22 3L19 5'
+                  'C19 11 15 17 6 18C-4 19 -14 14 -17 4Z"/>'
+                  '<ellipse class="lead" style="stroke:#7d776b;fill:none" cx="-3" cy="0" rx="3.4" ry="5"/>'
+                  '<circle cx="11" cy="-4" r="2.2" fill="#7d776b"/>'),
+    # мультяшная: круглая, большой глаз и улыбка
+    "cartoon": ('<circle class="bone" cx="0" cy="-1" r="19.5"/>'
+                '<circle cx="9" cy="-5" r="5.2" fill="#fff" stroke="#7d776b" stroke-width="1.5"/>'
+                '<circle cx="10.5" cy="-5" r="2.6" fill="#3b3934"/>'
+                '<path class="lead" style="stroke:#7d776b;stroke-width:2;stroke-linecap:round" d="M8 8Q13 11 17 6"/>'
+                '<circle cx="3" cy="5" r="3.2" fill="#d2491d" fill-opacity=".25"/>'),
+}
+HEAD = "muscle"
+
+
+def head(c, fwd, up, variant=None):
+    """Голова в точке c (экран), fwd и up — единичные векторы «к лицу» и «к макушке» на экране."""
+    a, b, cc, d = fwd[0], fwd[1], -up[0], -up[1]
+    return (f'<g class="head" transform="matrix({a:.3f} {b:.3f} {cc:.3f} {d:.3f} {c[0]:.1f} {c[1]:.1f})">'
+            f'{HEADS[variant or HEAD]}</g>')
+
+
+# Голова спереди (боковая планка): та же манера, без профиля
+HEADS_FRONT = {
+    "skull": ('<path class="bone" d="M-17 2C-19 -12 -10 -21 0 -21C10 -21 19 -12 17 2C16 8 13 11 10 13'
+              'C9 17 5 19 0 19C-5 19 -9 17 -10 13C-13 11 -16 8 -17 2Z"/>'
+              '<ellipse cx="-6.5" cy="0" rx="4.4" ry="5" fill="#7d776b"/><ellipse cx="6.5" cy="0" rx="4.4" ry="5" fill="#7d776b"/>'
+              '<path class="lead" style="stroke:#7d776b" d="M-5 13H5M-2 11v4M2 11v4"/>'),
+    "mannequin": '<ellipse class="bone" cx="0" cy="-1" rx="16" ry="20"/>',
+    "cartoon": ('<circle class="bone" cx="0" cy="-1" r="19.5"/><circle cx="-6" cy="-4" r="2.6" fill="#3b3934"/>'
+                '<circle cx="6" cy="-4" r="2.6" fill="#3b3934"/>'
+                '<path class="lead" style="stroke:#7d776b;stroke-width:2;stroke-linecap:round" d="M-6 7Q0 11 6 7"/>'),
+}
+
+HEADS.update({
+    # подробный череп: свод, глазница, нос, скула, нижняя челюсть с углом и зубы
+    "skull2": ('<path class="bone" d="M-19 3C-22 -10 -13 -21 1 -21C13 -21 20 -13 20 -4C20 -1 21 1 22 3L19 4'
+               'C19 6 18 7 17 7L17 9H6C3 9 -1 8 -4 7C-8 8 -13 8 -16 7C-18 6 -19 5 -19 3Z"/>'
+               '<path class="bone" d="M-7 6C-9 10 -7 14 -4 15.5C1 17.5 9 16.5 14.5 14.5C16.5 13.5 16.5 11 15.5 9.5H6C2 9.5 -3 8 -7 6Z"/>'
+               '<circle cx="10" cy="-3" r="4.6" fill="#7d776b"/>'
+               '<path d="M18.5 1.5L16 5.5H19Z" fill="#7d776b"/>'
+               '<path class="lead" style="stroke:#7d776b" d="M2 3Q7 2 12 4M7 7v5M10 7v5M13 7v5"/>'
+               '<circle cx="-7" cy="3" r="1.8" fill="#7d776b"/>'),
+    # профиль человека: лоб, нос, губы, подбородок, без черт лица
+    "profile": ('<path class="bone" d="M-18 2C-20 -12 -10 -21 2 -21C12 -21 18 -15 19 -7L19 -3L23 3'
+                'C23 4 22 5 20 5L20 7C21 8 20 9 19 9.5L19 11C19 14 16 16 12 16L8 17C2 19 -6 17 -11 13'
+                'C-15 10 -17 7 -18 2Z"/>'
+                '<path class="lead" style="stroke:#7d776b;fill:none" d="M-4 -2C-1 -2 0 2 -2 4C-3 5 -5 4 -5 2"/>'
+                '<path class="lead" style="stroke:#7d776b;stroke-linecap:round" d="M10 -3Q12.5 -1.5 15 -3"/>'),
+    # минимализм: шар и маленький «нос»-указатель, куда смотрит человек
+    "ball": ('<circle class="bone" cx="0" cy="-1" r="19"/>'
+             '<path class="bone" d="M17 -6L24 0L17 5Z"/>'),
+    # «с мышцами»: череп в мышечном слое — височная и жевательная мышцы, как у тела
+    "muscle": ('<path class="bone" d="M-18 4C-22 -9 -13 -21 1 -21C13 -21 20 -13 20 -3L22 3L19 5'
+               'C19 10 16 15 9 16C3 18 -5 17 -10 13C-14 11 -17 8 -18 4Z"/>'
+               '<path class="m" d="M-12 -6C-10 -15 2 -18 10 -13C13 -11 12 -7 8 -6C3 -5 -4 -4 -7 -1C-10 0 -13 -2 -12 -6Z"/>'
+               '<path class="m" d="M-3 2C0 0 5 1 6 4L8 13C6 15 1 15 -1 13Z"/>'
+               '<circle cx="10.5" cy="-2.5" r="3.6" fill="#7d776b"/>'),
+})
+HEADS_FRONT.update({
+    "skull2": HEADS_FRONT["skull"],
+    "profile": '<ellipse class="bone" cx="0" cy="-1" rx="16" ry="20"/>',
+    "ball": '<circle class="bone" cx="0" cy="-1" r="19"/>',
+    "muscle": ('<ellipse class="bone" cx="0" cy="-1" rx="17" ry="20"/>'
+               '<path class="m" d="M-15 -4C-15 -12 -9 -17 -4 -17C-6 -12 -8 -8 -12 -2Z"/>'
+               '<path class="m" d="M15 -4C15 -12 9 -17 4 -17C6 -12 8 -8 12 -2Z"/>'
+               '<path class="m" d="M-13 4L-8 3L-7 13L-11 11Z"/><path class="m" d="M13 4L8 3L7 13L11 11Z"/>'
+               '<ellipse cx="-6" cy="-1" rx="3.4" ry="3.8" fill="#7d776b"/><ellipse cx="6" cy="-1" rx="3.4" ry="3.8" fill="#7d776b"/>'),
+})
+
+
+def head_front(c, up, variant=None):
+    fwd = (-up[1], up[0])
+    a, b, cc, d = fwd[0], fwd[1], -up[0], -up[1]
+    return (f'<g class="head front" transform="matrix({a:.3f} {b:.3f} {cc:.3f} {d:.3f} {c[0]:.1f} {c[1]:.1f})">'
+            f'{HEADS_FRONT[variant or HEAD]}</g>')
