@@ -78,6 +78,8 @@ jobs:
           if [ "$AUTO_PUBLISH" = "true" ]; then
             git add content/articles static/img agent/topics.csv agent/usage.csv
             git commit -m "Статья: $TITLE"
+            # Пока писалась статья, в main могли слить другие изменения.
+            git pull --rebase origin main
             git push origin HEAD:main
           else
             BR="article/$SLUG"
