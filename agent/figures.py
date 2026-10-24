@@ -6,6 +6,7 @@
 import json
 import re
 
+import moves as M
 import svgkit as K
 
 KINDS = ["pose", "bars", "range", "compare", "checklist", "steps"]
@@ -349,11 +350,148 @@ def missing(body):
     return out
 
 
+ANGLE_KEYS = ["torso", "thigh", "shank", "foot", "upper", "fore", "thigh2", "shank2", "foot2", "upper2", "fore2"]
+POSE_ANGLES = {"type": "object", "properties": {k: {"type": "number"} for k in ANGLE_KEYS},
+               "required": ANGLE_KEYS, "additionalProperties": False}
+POINTS = ["none", "head", "hip", "knee", "heel", "toe", "hand", "hand2", "heel2"]
+
+MOVES_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "moves": {"type": "array", "items": {
+            "type": "object",
+            "properties": {
+                "after": {"type": "string", "description": "точный кусок текста статьи (20–60 символов) из абзаца или пункта, где описано упражнение"},
+                "exercise": {"type": "string", "enum": list(M.EXERCISES) + ["custom"]},
+                "title": {"type": "string", "description": "название упражнения, до 34 символов"},
+                "cues": {"type": "array", "items": {"type": "string"}, "description": "1–2 подсказки по технике, каждая до 60 символов"},
+                "highlight": {"type": "array", "items": {"type": "string", "enum": M.MUSCLES}},
+                "verdict": {"type": "string", "enum": ["none", "ok", "bad"]},
+                "custom": {"type": "object", "properties": {
+                    "has_start": {"type": "boolean"}, "start": POSE_ANGLES, "end": POSE_ANGLES,
+                    "arrow": {"type": "string", "enum": POINTS}},
+                    "required": ["has_start", "start", "end", "arrow"], "additionalProperties": False},
+            },
+            "required": ["after", "exercise", "title", "cues", "highlight", "verdict", "custom"],
+            "additionalProperties": False}},
+    },
+    "required": ["moves"],
+    "additionalProperties": False,
+}
+
+MOVES_PROMPT = """Ниже статья для сайта тренера. Найди в ней КАЖДОЕ упражнение или движение, техника которого
+описана (поза, как двигаться, на что смотреть), и подбери к нему схему: скелет с мышцами, вид сбоку,
+начальная поза бледно, конечная ярко, рабочие мышцы подсвечены. Одно упражнение — одна схема.
+Не нужно: голые названия упражнений в списке программы без описания техники, упражнения в тренажёре или
+со скамьёй (снаряды не рисуются), просто упоминания вида спорта («кардио», «ходьба»), бытовые советы.
+Упражнение из списка «пока не делай» можно дать с verdict bad, одно на статью.
+Если упражнений с описанием техники нет — верни пустой список.
+
+Готовые упражнения (exercise):
+- breathing — лёжа на спине, ноги согнуты, выдох и подтягивание живота (поперечная мышца)
+- heel_slide — скольжение пятки: из положения лёжа с согнутыми ногами выпрямляешь ногу по полу
+- leg_lower — лёжа, ноги согнуты «столиком», поочерёдно опускаешь стопу к полу
+- head_lift — короткий подъём головы и плеч лёжа (малая амплитуда)
+- self_test — лёжа, голова и плечи приподняты, пальцы на животе (самопроверка диастаза)
+- full_crunch — полное скручивание до сидя
+- glute_bridge — ягодичный мостик
+- dead_bug_legs — «мёртвый жук»: лёжа, одна нога из «столика» выпрямляется вперёд
+- bird_dog — «птица-собака»: на четвереньках вытягиваешь противоположные руку и ногу
+- plank — планка на предплечьях
+- side_plank_knees — боковая планка с колен (рисуется видом спереди)
+- custom — любое другое упражнение без снаряда: задай углы сегментов сам.
+
+Углы для custom: градусы от вертикали «вверх», положительные — по часовой, человек смотрит вправо.
+0 — вверх, 90 — вправо (вперёд), 180 — вниз, -90 — влево (назад). torso — от таза к плечам, thigh — от таза
+к колену, shank — от колена к стопе, foot — поворот стопы (0 стоит на полу, -90 носок вверх, 90 носок вниз),
+upper — от плеча к локтю, fore — от локтя к кисти. С цифрой 2 — дальняя нога и рука (если двигаются так же,
+повтори те же числа). Поза сама встаёт на пол.
+Примеры: стойка torso 0, thigh 180, shank 180, foot 0, upper 180, fore 180; присед без веса torso 40, thigh 92,
+shank 150, foot 0, upper 90, fore 90; наклон с прямой спиной torso 75, thigh 172, shank 176, foot 0, upper 180,
+fore 180; выпад вперёд torso 0, thigh 100, shank 165, thigh2 200, shank2 260, foot2 60; лёжа на спине —
+torso -90, на животе и на четвереньках — torso 90.
+has_start false — только одна поза. arrow — какая точка движется сильнее всего.
+Для готовых упражнений custom заполни нулями, has_start false, arrow none.
+
+Правила:
+- after — точная цитата из статьи, из того абзаца или пункта списка, где упражнение описано. Не из подзаголовка.
+- title — название упражнения по-русски; cues — 1–2 подсказки из текста статьи, коротко, на «ты».
+- highlight — какие мышцы работают в упражнении (если пусто, возьмутся мышцы по умолчанию).
+- verdict: bad — упражнение из списка «пока не делай», ok — правильный вариант рядом с ошибкой, иначе none.
+- Без призывов и медицинских обещаний.
+
+Статья:
+{body}"""
+
+
+def plan_moves(client, meter, create, model, body):
+    msg = create(client, model, max_tokens=12000,
+                 output_config={"effort": "medium", "format": {"type": "json_schema", "schema": MOVES_SCHEMA}},
+                 messages=[{"role": "user", "content": MOVES_PROMPT.format(body=body)}])
+    meter.add(msg.usage, model)
+    text = next(b.text for b in msg.content if b.type == "text")
+    return json.loads(text)["moves"]
+
+
+def has_moves(body):
+    return 'class="step move"' in body
+
+
+def render_move(m, path):
+    body, h = M.draw_exercise(m)
+    alt = m["title"] + (": " + m["cues"][0] if m.get("cues") else "")
+    K.svg(path, alt, body, h=int(h))
+    return alt
+
+
+def insert_after(body, quote, html):
+    """Ставит схему после абзаца или всего списка, где встретилась цитата."""
+    i = body.find(quote.strip())
+    if i < 0 or not quote.strip():
+        return body, False
+    end = body.find("\n\n", i)
+    end = len(body) if end < 0 else end
+    # уже вставленные схемы этого блока идут подряд — новую ставим после них
+    while body.startswith("\n\n<figure", end):
+        nxt = body.find("\n\n", end + 2)
+        end = len(body) if nxt < 0 else nxt
+    return body[:end] + "\n\n" + html + body[end:], True
+
+
+def add_moves(client, meter, create, model, body, img_dir, url_prefix):
+    """Схемы ко всем описанным упражнениям. Возвращает (новый текст, сколько добавлено)."""
+    if has_moves(body):
+        return body, 0
+    return place_moves(plan_moves(client, meter, create, model, body), body, img_dir, url_prefix)
+
+
+def place_moves(items, body, img_dir, url_prefix):
+    n = 0
+    for k, m in enumerate(items, 1):
+        if m["exercise"] == "custom":
+            c = m["custom"]
+            m = dict(m, exercise="custom", start=c["start"] if c["has_start"] else None, end=c["end"],
+                     arrow=c["arrow"])
+        name = f"move-{k:02d}.svg"
+        try:
+            alt = render_move(m, img_dir / name)
+        except Exception as e:  # одна кривая схема не должна ронять статью
+            print(f"Схема «{m['title']}» не получилась: {e}")
+            continue
+        # подписи нет: название и подсказки уже на самой схеме
+        html = (f'<figure class="step move"><img src="{url_prefix}/{name}" alt="{K.esc(alt)}" width="640" '
+                f'loading="lazy"></figure>')
+        body, ok = insert_after(body, m["after"], html)
+        n += ok
+    return body, n
+
+
 def add(client, meter, create, model, body, slug, img_dir, url_prefix):
-    """Рисует картинки ко всем подзаголовкам без картинки. Возвращает (новый текст, сколько добавлено)."""
+    """Схемы к упражнениям и картинки ко всем подзаголовкам без картинки. Возвращает (новый текст, сколько добавлено)."""
+    body, n_moves = add_moves(client, meter, create, model, body, img_dir, url_prefix)
     todo = missing(body)
     if not todo:
-        return body, 0
+        return body, n_moves
     figs = plan(client, meter, create, model, body, todo)
     n = 0
     # при повторном запуске номера продолжаются, чтобы не затереть старые картинки
@@ -375,4 +513,4 @@ def add(client, meter, create, model, body, slug, img_dir, url_prefix):
         if ok:
             todo.remove(f["heading"])
             n += 1
-    return body, n
+    return body, n + n_moves
