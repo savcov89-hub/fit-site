@@ -69,8 +69,13 @@ def head(title, description, path, extra="", image=None):
             '<script>(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};'
             'm[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,'
             'a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");'
-            f'ym({mid},"init",{{clickmap:true,trackLinks:true,accurateTrackBounce:true}});</script>'
+            f'ym({mid},"init",{{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true}});</script>'
         )
+    if SITE.get("google_analytics_id"):
+        gid = esc(SITE["google_analytics_id"])
+        metrika += (f'<script async src="https://www.googletagmanager.com/gtag/js?id={gid}"></script>'
+                    '<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}'
+                    f'gtag("js",new Date());gtag("config","{gid}");</script>')
     return f"""<!doctype html>
 <html lang="ru">
 <head>
@@ -113,6 +118,8 @@ def foot():
 <p class="muted">© {year} {esc(SITE["author"])}. Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.{META_NOTE if insta else ""}</p>
 </div></footer>
 <script>
+document.addEventListener("click",function(e){{var a=e.target.closest&&e.target.closest("[data-goal]");if(!a)return;var g=a.getAttribute("data-goal");
+if(window.ym){{ym({esc(SITE.get("yandex_metrika_id") or 0)},"reachGoal",g)}}if(window.gtag){{gtag("event",g,{{link_url:a.href}})}}}});
 (function(){{var els=document.querySelectorAll(".reveal");if(!("IntersectionObserver" in window)){{els.forEach(function(e){{e.classList.add("in")}});return}}
 var io=new IntersectionObserver(function(es){{es.forEach(function(e){{if(e.isIntersecting){{e.target.classList.add("in");io.unobserve(e.target)}}}})}},{{rootMargin:"0px 0px -8% 0px"}});
 els.forEach(function(e){{io.observe(e)}})}})();
@@ -128,7 +135,7 @@ META_NOTE = " *Instagram принадлежит компании Meta, приз�
 def contacts_html():
     rows = []
     if not placeholder(SITE.get("phone")):
-        rows.append(("Телефон", f'<a href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["phone"]))}">{esc(SITE["phone"])}</a>'))
+        rows.append(("Телефон", f'<a data-goal="click_phone" href="tel:{esc(re.sub(r"[^+0-9]", "", SITE["phone"]))}">{esc(SITE["phone"])}</a>'))
     if not placeholder(SITE.get("instagram")):
         rows.append(("Instagram*", f'<a href="{esc(SITE["instagram"])}" rel="noopener">@fitness_savtsov</a>'))
     place = SITE["club"]
@@ -150,16 +157,16 @@ def messengers_html():
     """Кнопки связи: звонок и мессенджеры. Пустые и [заглушки] пропускаются."""
     links = []
     if not placeholder(SITE.get("phone")):
-        links.append(("btn-primary", f'tel:{re.sub(r"[^+0-9]", "", SITE["phone"])}', "Позвонить"))
+        links.append(("btn-primary", f'tel:{re.sub(r"[^+0-9]", "", SITE["phone"])}', "Позвонить", "click_phone"))
     # WhatsApp последним: с февраля 2026 в России открывается в основном через VPN
     for key, name in (("telegram", "Telegram"), ("max", "Max"), ("whatsapp", "WhatsApp")):
         if not placeholder(SITE.get(key)):
-            links.append(("btn-ghost", SITE[key], name))
+            links.append(("btn-ghost", SITE[key], name, f"click_{key}"))
     if not links:
         return ""
     return '<div class="actions messengers">' + "".join(
-        f'<a class="btn {cls}" href="{esc(url)}"{"" if url.startswith("tel:") else " rel=\"noopener\""}>{label}</a>'
-        for cls, url, label in links
+        f'<a class="btn {cls}" href="{esc(url)}" data-goal="{goal}"{"" if url.startswith("tel:") else " rel=\"noopener\""}>{label}</a>'
+        for cls, url, label, goal in links
     ) + "</div>"
 
 
