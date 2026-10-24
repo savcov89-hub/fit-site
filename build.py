@@ -123,7 +123,7 @@ def foot():
     return f"""</main>
 <footer class="bottom"><div class="wrap">
 <div class="foot-brand">{logo_mark()}<div><b>{esc(SITE["author"])}</b><br>{esc(SITE["author_role"].capitalize())}, {esc(SITE["club"])}, {esc(SITE["city"])}</div></div>
-<nav class="foot-nav"><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a href="/#kontakty">Контакты</a>{insta}</nav>
+<nav class="foot-nav"><a href="/#obo-mne">Обо мне</a><a href="/#uslugi">Тренировки</a><a href="/stati/">Статьи</a><a href="/hammer-fit-kontinent/">Клуб</a><a href="/#kontakty">Контакты</a>{insta}</nav>
 <p class="muted">© {year} {esc(SITE["author"])}. Статьи на сайте не заменяют консультацию врача. Если что-то болит вне зала, сначала к врачу.{META_NOTE if insta else ""}</p>
 </div></footer>
 <script>
@@ -344,7 +344,7 @@ def render_index(items):
         "alumniOf": "Новосибирский государственный педагогический университет",
     }
     extra = f'<script type="application/ld+json">{json.dumps(person, ensure_ascii=False)}</script>'
-    title = f"{SITE['author']} — {SITE['author_role']} в {SITE['city']}е"
+    title = SITE.get("home_title") or f"{SITE['author']} — {SITE['author_role']} в {SITE['city']}е"
     first, last = SITE["author"].split(" ", 1)
     stats = "".join(
         f'<li class="stat reveal"><b>{esc(s["value"])}</b><span>{esc(s["label"])}</span></li>'
@@ -355,7 +355,7 @@ def render_index(items):
         articles = (f'<section class="block" id="stati"><div class="wrap"><div class="block-head">'
                     f'<h2>Новые статьи</h2><a class="link-more" href="/stati/">Все статьи →</a></div>'
                     f'{article_list(items[:6])}</div></section>')
-    page = head(title, SITE["tagline"], "/", extra, PORTRAIT or None)
+    page = head(title, SITE.get("home_description") or SITE["tagline"], "/", extra, PORTRAIT or None)
     page += f"""<section class="hero"><div class="wrap hero-grid">
 <div class="hero-text">
 <p class="kicker">{esc(SITE["author_role"].capitalize())} · {esc(SITE["city"])}</p>
@@ -382,6 +382,55 @@ def render_index(items):
 """
     page += foot()
     (OUT / "index.html").write_text(page, encoding="utf-8")
+
+
+def load_pages():
+    """Страницы услуг: content/pages/<slug>.md (кроме home.md) → /<slug>/."""
+    pages = []
+    for f in sorted((CONTENT / "pages").glob("*.md")):
+        if f.stem == "home":
+            continue
+        meta, body = parse_front_matter(f.read_text(encoding="utf-8"))
+        if meta.get("draft"):
+            continue
+        meta.setdefault("slug", f.stem)
+        meta["body"] = body
+        pages.append(meta)
+    return pages
+
+
+def render_page(p):
+    """Страница услуги: H1, текст, FAQ, контакты. Целится на местный запрос из semantic_core.csv."""
+    path = f"/{p['slug']}/"
+    body = markdown.markdown(p["body"], extensions=["extra", "sane_lists"])
+    faq, extra = "", ""
+    if p.get("faq"):
+        faq = "<section class=\"faq\"><h2>Частые вопросы</h2>" + "".join(
+            f"<details><summary>{esc(q['q'])}</summary><p>{esc(q['a'])}</p></details>" for q in p["faq"]
+        ) + "</section>"
+        data = {"@context": "https://schema.org", "@type": "FAQPage",
+                "mainEntity": [{"@type": "Question", "name": q["q"],
+                                "acceptedAnswer": {"@type": "Answer", "text": q["a"]}} for q in p["faq"]]}
+        extra = f'<script type="application/ld+json">{json.dumps(data, ensure_ascii=False)}</script>'
+    page = head(p.get("seo_title", p["title"]), p["description"], path, extra, PORTRAIT or None)
+    page += f"""<article class="post wrap narrow">
+<p class="crumbs"><a href="/">Главная</a><span>/</span>{esc(p.get("crumb", p["title"]))}</p>
+<h1>{esc(p["title"])}</h1>
+<div class="prose">
+{body}
+</div>
+{faq}
+<section class="contacts-block" id="kontakty"><h2>Контакты</h2>
+{messengers_html()}
+{contacts_html()}
+</section>
+</article>
+"""
+    page += foot()
+    out = OUT / p["slug"] / "index.html"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(page, encoding="utf-8")
+    return path
 
 
 def render_list(items):
@@ -429,6 +478,8 @@ def main():
     paths = [("/", None), ("/stati/", None)]
     for a in items:
         paths.append((render_article(a, items), a.get("updated", a["date"])))
+    for p in load_pages():
+        paths.append((render_page(p), p.get("updated")))
     render_index(items)
     render_list(items)
     render_404()
