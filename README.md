@@ -20,7 +20,7 @@
    Адрес вида `fit-site.<аккаунт>.workers.dev` записать в `site.json` → `base_url`. Свой домен: проект → Settings → Domains & Routes.
 2. **Ключ Claude API.** platform.claude.com → API Keys → Create key. Положить в GitHub: Settings → Secrets and variables → Actions → New repository secret, имя `ANTHROPIC_API_KEY`. В консоли Anthropic стоит поставить лимит расходов: Settings → Limits.
 3. **Разрешить агенту создавать запросы на проверку.** Settings → Actions → General → Workflow permissions → Read and write permissions и галочка «Allow GitHub Actions to create and approve pull requests».
-4. **Поисковики.** Яндекс Вебмастер и Google Search Console: добавить сайт, код подтверждения вписать в `site.json` (`yandex_verification`, `google_verification`), затем отправить `https://<адрес>/sitemap.xml`. Яндекс Метрика — номер счётчика в `yandex_metrika_id`.
+4. **Поисковики.** Яндекс Вебмастер и Google Search Console: добавить сайт, код подтверждения вписать в `site.json` (`yandex_verification`, `google_verification`), затем отправить `https://<адрес>/sitemap.xml`. Яндекс Метрика — номер счётчика в `yandex_metrika_id`. Google Analytics 4 — идентификатор вида `G-XXXXXXX` в `google_analytics_id`. Нажатия на кнопки связи уходят в оба счётчика как цели `click_phone`, `click_telegram`, `click_max`, `click_whatsapp` (в Метрике создать цели типа «JavaScript-событие» с этими идентификаторами).
 
 ## Картинки в статьях
 
@@ -56,6 +56,7 @@
 ## Править руками
 
 - Главная: `content/pages/home.md` и `site.json`.
+- Отзывы на главной: `site.json` → `reviews`, список вида `{"name": "Анна", "goal": "минус 6 кг за 4 месяца", "text": "..."}`. Пустой список — блока нет. Только настоящие отзывы с согласия клиента.
 - Статья: `content/articles/<slug>.md`. Сверху JSON с заголовком, описанием, FAQ и источниками, ниже текст в Markdown. Скрыть статью: `"draft": true`.
 - Проверить сборку локально: `pip install -r requirements.txt && python3 build.py`, сайт появится в `public/`.
 

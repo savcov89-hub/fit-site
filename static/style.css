@@ -1,5 +1,8 @@
 /* Фирменный стиль из монтажа Reels: графит, жёлтый акцент #FFD21F, Montserrat Black + SemiBold,
    появление easeOutExpo, мелочи easeOutBack, длительности по шкале кадров 30 к/с (2/4/6/9/12/18). */
+/* Montserrat с самого сайта: без запросов к Google, быстрее первый экран. Вариативный, веса 400–900. */
+@font-face{font-family:"Montserrat";font-style:normal;font-weight:400 900;font-display:swap;src:url(/fonts/montserrat-cyrillic.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Montserrat";font-style:normal;font-weight:400 900;font-display:swap;src:url(/fonts/montserrat-latin.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 :root{
   --bg:#121214;--bg2:#17181b;--card:#1c1d21;--card2:#232429;--line:#2a2b31;
   --fg:#fff;--text:#dcdce0;--muted:#8f9098;
@@ -156,6 +159,18 @@ details p{margin:0;padding:0 20px 18px;font-size:.95rem}
 .author-box p{margin:0;font-size:.9rem;line-height:1.6}
 .related .cards{grid-template-columns:repeat(2,1fr)}
 
+/* связь в конце статьи */
+.cta-box{margin:3em 0 0;padding:24px 22px;border-radius:var(--r);background:var(--accent-soft);border:2px solid var(--accent)}
+.cta-box p{margin:0 0 .4em;font-size:.95rem}
+.cta-box .cta-title{font-weight:900;font-size:1.15rem;color:var(--fg);text-transform:uppercase;letter-spacing:-.01em}
+.cta-box .messengers{margin:18px 0 0}
+
+/* отзывы */
+.review-list{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.review{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px 20px;display:flex;flex-direction:column;gap:14px}
+.review p{margin:0;font-size:.92rem;line-height:1.6}
+.review-who{margin-top:auto;font-size:.82rem;color:var(--muted)}
+
 /* подвал */
 .bottom{border-top:1px solid var(--line);padding:44px 0 36px;background:var(--bg2);font-size:.9rem}
 .bottom .wrap{display:grid;grid-template-columns:1fr auto;gap:20px 32px;align-items:center}
@@ -192,7 +207,7 @@ details p{margin:0;padding:0 20px 18px;font-size:.95rem}
 @media (max-width:960px){
   .hero-grid{grid-template-columns:1fr 1fr;gap:32px}
   .stats{grid-template-columns:repeat(2,1fr)}
-  .services ul,.cards,.contacts{grid-template-columns:repeat(2,1fr)}
+  .services ul,.cards,.contacts,.review-list{grid-template-columns:repeat(2,1fr)}
 }
 
 /* телефон */
@@ -219,7 +234,7 @@ details p{margin:0;padding:0 20px 18px;font-size:.95rem}
   .stat{padding:16px 14px}
   .stat span{font-size:.8rem}
   .block{padding:52px 0}
-  .services ul,.cards,.contacts,.about ul,.related .cards{grid-template-columns:1fr}
+  .services ul,.cards,.contacts,.about ul,.related .cards,.review-list{grid-template-columns:1fr}
   .services li{padding:20px 18px}
   .prose{font-size:16px;line-height:1.6}
   .prose>p:first-child{font-size:17px}
@@ -236,6 +251,7 @@ details p{margin:0;padding:0 20px 18px;font-size:.95rem}
   .stat,.services li,.card a,.contacts li,details,.author-box{box-shadow:0 1px 2px rgba(18,18,20,.04),0 8px 24px rgba(18,18,20,.04)}
   .sticker{box-shadow:0 12px 30px rgba(18,18,20,.18)}
   .avatar img{border-color:var(--fg)}
+  .cta-box .btn-ghost{border-color:rgba(18,18,20,.25)}
 }
 
 /* схемы к шагам техники */
