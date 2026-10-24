@@ -2,7 +2,9 @@ name: write-article
 
 on:
   schedule:
-    - cron: "0 3 * * *"   # 10:00 по Новосибирску, каждый день
+    # 09:23 по Новосибирску. Не ровно в начале часа: в :00 GitHub перегружен
+    # и откладывает запуски по расписанию на часы (23.10 старт был в 15:13).
+    - cron: "23 2 * * *"
   workflow_dispatch:
     inputs:
       topic:
@@ -23,12 +25,25 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      # Если статью за сегодня уже запустили вручную, запуск по расписанию её не дублирует.
+      - name: Проверить, есть ли статья за сегодня
+        id: guard
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && grep -lq "\"date\": \"$(date -u +%F)\"" content/articles/*.md; then
+            echo "Статья за $(date -u +%F) уже есть, пропускаю."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip != 'true'
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
+        if: steps.guard.outputs.skip != 'true'
 
       - name: Написать статью
+        if: steps.guard.outputs.skip != 'true'
         id: art
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -46,9 +61,11 @@ jobs:
           fi
 
       - name: Проверить, что сайт собирается
+        if: steps.guard.outputs.skip != 'true'
         run: python3 build.py
 
       - name: Отправить на проверку или опубликовать
+        if: steps.guard.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           AUTO_PUBLISH: ${{ vars.AUTO_PUBLISH }}
