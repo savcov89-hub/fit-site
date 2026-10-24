@@ -1,0 +1,66 @@
+name: auto-merge
+
+# Сам сливает правки сайта от Claude (ветки claude/…) и статьи (ветки article/…),
+# если сайт собирается. Не сливает черновик (Draft) и PR с меткой «проверю сам».
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, unlabeled]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  merge:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft &&
+      (startsWith(github.head_ref, 'claude/') || startsWith(github.head_ref, 'article/'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      HOLD_LABEL: проверю сам
+    steps:
+      - name: Проверить метку «проверю сам»
+        id: hold
+        run: |
+          gh label create "$HOLD_LABEL" --color FBCA04 \
+            --description "Не сливать автоматически, Михаил проверит сам" 2>/dev/null || true
+          if gh pr view "$PR" --json labels --jq '.labels[].name' | grep -qxF "$HOLD_LABEL"; then
+            echo "Стоит метка «$HOLD_LABEL», не сливаю."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          # Правки самих workflow (в том числе этого) Михаил сливает вручную.
+          elif gh pr diff "$PR" --name-only | grep -q '^\.github/'; then
+            echo "PR меняет .github/, не сливаю автоматически."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.hold.outputs.skip != 'true'
+      - uses: actions/setup-python@v5
+        if: steps.hold.outputs.skip != 'true'
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+        if: steps.hold.outputs.skip != 'true'
+      - name: Проверить, что сайт собирается
+        if: steps.hold.outputs.skip != 'true'
+        run: python3 build.py
+
+      # Слияние через GITHUB_TOKEN не запускает push-триггер, поэтому сайт
+      # публикуется явным запуском publish-site.
+      - name: Слить и опубликовать
+        if: steps.hold.outputs.skip != 'true'
+        run: |
+          gh pr merge "$PR" --merge --match-head-commit "${{ github.event.pull_request.head.sha }}"
+          gh workflow run publish-site.yml --ref main
