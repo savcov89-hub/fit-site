@@ -21,9 +21,12 @@ SCIENCE = re.compile(r"pubmed|ncbi|doi\.org|springer|wiley|frontiersin|bmj|jaman
                      r"journals\.|mdpi|lww|tandfonline|nature\.com|thelancet|who\.int|acsm|nsca|jissn|"
                      r"cochrane", re.I)
 
+TITLE_TAIL = re.compile(r"что говорят исследования|по данным исследований|по исследованиям|по науке", re.I)
+
 FIX_SCHEMA = {
     "type": "object",
     "properties": {
+        "title": {"type": "string"},
         "seo_title": {"type": "string"},
         "description": {"type": "string"},
         "replacements": {"type": "array", "items": {
@@ -31,7 +34,7 @@ FIX_SCHEMA = {
             "properties": {"old": {"type": "string"}, "new": {"type": "string"}},
             "required": ["old", "new"], "additionalProperties": False}},
     },
-    "required": ["seo_title", "description", "replacements"],
+    "required": ["title", "seo_title", "description", "replacements"],
     "additionalProperties": False,
 }
 
@@ -39,6 +42,18 @@ FIX_SCHEMA = {
 def stems(keyword):
     """Основы значимых слов запроса: первые 5 букв слов длиннее 3 символов."""
     return [w[:5] for w in re.findall(r"[а-яёa-z]+", keyword.lower()) if len(w) > 3]
+
+
+def short_stems(keyword):
+    """Короткие основы для подсчёта полного запроса в любом падеже: «боли» и «болью» — это «бол»."""
+    return [w[:max(3, min(5, len(w) - 2))] for w in re.findall(r"[а-яёa-z]+", keyword.lower()) if len(w) > 3]
+
+
+def has_full(text, keyword):
+    """Весь запрос целиком (все значимые слова) в тексте."""
+    low = text.lower()
+    words = short_stems(keyword)
+    return bool(words) and all(s in low for s in words)
 
 
 def covers(text, keyword):
@@ -63,6 +78,20 @@ def check(art, keyword, existing):
     for phrase in FORBIDDEN:
         if phrase in text_all.lower():
             errors.append(f"запретная фраза «{phrase}»")
+    n = len(art["title"])
+    if n > 75:
+        errors.append(f"H1 {n} символов, нужно до 70")
+    if TITLE_TAIL.search(art["title"]):
+        errors.append("в H1 хвост «что говорят исследования», убрать")
+    heads = re.findall(r"^#{2,3} (.+)$", body, re.M)
+    full = [h for h in heads if has_full(h, keyword)]
+    if len(full) > 2 and len(stems(keyword)) > 1:
+        errors.append(f"главный запрос целиком в {len(full)} подзаголовках, нужно не больше 2: "
+                      + " | ".join(full))
+    faq_full = [q["q"] for q in art["faq"] if has_full(q["q"], keyword)]
+    if len(faq_full) > 2 and len(stems(keyword)) > 1:
+        errors.append(f"главный запрос целиком в {len(faq_full)} вопросах FAQ, нужно не больше 2: "
+                      + " | ".join(faq_full))
 
     if not covers(art["title"], keyword):
         notes.append("главного запроса нет в H1")
@@ -101,14 +130,19 @@ def check_and_fix(client, meter, create, model, art, keyword, existing):
     if errors:
         prompt = (
             f"Главный запрос статьи: «{keyword}».\n"
+            f"Текущий H1 (title): {art['title']}\n"
             f"Текущий seo_title: {art['seo_title']}\n"
             f"Текущий description: {art['description']}\n"
             f"Проблемы: {'; '.join(errors)}.\n\n"
-            "Исправь: seo_title 40–65 символов с главным запросом в начале; description 120–160 "
-            "символов, суть и польза без призывов. Для каждой запретной фразы дай замену: old — "
-            "точный фрагмент из текста ниже (с окружающими словами, чтобы он был уникален), new — "
-            "та же мысль без запретной фразы. Если seo_title или description в порядке, верни их "
-            "без изменений.\n\nТекст статьи:\n" + art["body_markdown"]
+            "Исправь: H1 до 70 символов — главный запрос и одно короткое уточнение, без хвоста «что "
+            "говорят исследования» и перечней; seo_title 40–65 символов с главным запросом в начале; "
+            "description 120–160 символов, суть и польза без призывов. Для каждой запретной фразы "
+            "дай замену: old — точный фрагмент из текста ниже (с окружающими словами, чтобы он был "
+            "уникален), new — та же мысль без запретной фразы. Если запрос повторяется в подзаголовках "
+            "или вопросах FAQ, оставь его целиком в двух, остальные перепиши короче и естественно, "
+            "как спросил бы человек: old — строка подзаголовка целиком (с ## или ###) или вопрос FAQ "
+            "целиком, new — новая строка. Что в порядке, верни без изменений."
+            "\n\nТекст статьи:\n" + art["body_markdown"]
             + "\n\nFAQ:\n" + json.dumps(art["faq"], ensure_ascii=False)
         )
         msg = create(client, model, max_tokens=8000,
@@ -117,20 +151,26 @@ def check_and_fix(client, meter, create, model, art, keyword, existing):
         meter.add(msg.usage, model)
         if msg.stop_reason not in ("refusal", "max_tokens"):
             fix = json.loads(next(b.text for b in msg.content if b.type == "text"))
-            art["seo_title"], art["description"] = fix["seo_title"], fix["description"]
+            art["title"], art["seo_title"], art["description"] = fix["title"], fix["seo_title"], fix["description"]
             for r in fix["replacements"]:
                 if r["old"] and r["old"] in art["body_markdown"]:
                     art["body_markdown"] = art["body_markdown"].replace(r["old"], r["new"], 1)
                     fixed.append(f"«{r['old'][:60]}» → «{r['new'][:60]}»")
                 else:
                     for q in art["faq"]:
-                        if r["old"] and r["old"] in q["a"]:
-                            q["a"] = q["a"].replace(r["old"], r["new"], 1)
-                            fixed.append(f"FAQ: «{r['old'][:60]}» → «{r['new'][:60]}»")
+                        for k in ("q", "a"):
+                            if r["old"] and r["old"] in q[k]:
+                                q[k] = q[k].replace(r["old"], r["new"], 1)
+                                fixed.append(f"FAQ: «{r['old'][:60]}» → «{r['new'][:60]}»")
+                                break
+                        else:
+                            continue
+                        break
             errors, notes, stats = check(art, keyword, existing)
 
     lines = ["**SEO-проверка**",
-             f"- title: {len(art['seo_title'])} симв., description: {len(art['description'])} симв.",
+             f"- H1: {len(art['title'])} симв., title: {len(art['seo_title'])} симв., "
+             f"description: {len(art['description'])} симв.",
              f"- разделов H2: {stats['h2']}, слов: {stats['words']}, внутренних ссылок: "
              f"{stats['internal_links']}, источников: {stats['sources']} (научных {stats['science_sources']})"]
     if fixed:
