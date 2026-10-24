@@ -152,7 +152,9 @@ def draw_bars(f):
     head, y = header(f)
     top = max(i["value"] for i in items) or 1
     out = [head]
-    x0, x1 = 32, 520
+    # подпись числа стоит справа от полосы: самая длинная не должна вылезать за край (~12,5 px на символ)
+    longest = max(len(i["note"] or fmt(i["value"])) for i in items)
+    x0, x1 = 32, min(520, 608 - 10 - int(longest * 12.5))
     for i in items:
         out.append(text(x0, y + 4, wrap(i["label"], 48)[0]))
         w = max(4, (x1 - x0) * i["value"] / top)
@@ -350,7 +352,7 @@ def missing(body):
     return out
 
 
-ANGLE_KEYS = ["torso", "thigh", "shank", "foot", "upper", "fore", "thigh2", "shank2", "foot2", "upper2", "fore2"]
+ANGLE_KEYS = ["torso", "flex", "thigh", "shank", "foot", "upper", "fore", "thigh2", "shank2", "foot2", "upper2", "fore2"]
 POSE_ANGLES = {"type": "object", "properties": {k: {"type": "number"} for k in ANGLE_KEYS},
                "required": ANGLE_KEYS, "additionalProperties": False}
 POINTS = ["none", "head", "hip", "knee", "heel", "toe", "hand", "hand2", "heel2"]
@@ -405,11 +407,14 @@ MOVES_PROMPT = """Ниже статья для сайта тренера. Най
 0 — вверх, 90 — вправо (вперёд), 180 — вниз, -90 — влево (назад). torso — от таза к плечам, thigh — от таза
 к колену, shank — от колена к стопе, foot — поворот стопы (0 стоит на полу, -90 носок вверх, 90 носок вниз),
 upper — от плеча к локтю, fore — от локтя к кисти. С цифрой 2 — дальняя нога и рука (если двигаются так же,
-повтори те же числа). Поза сама встаёт на пол.
-Примеры: стойка torso 0, thigh 180, shank 180, foot 0, upper 180, fore 180; присед без веса torso 40, thigh 92,
+повтори те же числа). flex — изгиб позвоночника от таза к плечам: 0 — ровная спина, больше нуля — сгибание
+вперёд (спина круглая, как в скручивании: 30–60), меньше нуля — прогиб назад. Поза сама встаёт на пол.
+Позвоночник не палка: в скручиваниях, подъёмах корпуса, «кошке», наклонах с круглой спиной задавай flex,
+torso при этом — наклон нижней части спины (у таза).
+Примеры (flex 0, если не сказано иначе): стойка torso 0, thigh 180, shank 180, foot 0, upper 180, fore 180; присед без веса torso 40, thigh 92,
 shank 150, foot 0, upper 90, fore 90; наклон с прямой спиной torso 75, thigh 172, shank 176, foot 0, upper 180,
 fore 180; выпад вперёд torso 0, thigh 100, shank 165, thigh2 200, shank2 260, foot2 60; лёжа на спине —
-torso -90, на животе и на четвереньках — torso 90.
+torso -90, на животе и на четвереньках — torso 90; скручивание лёжа — torso -88, flex 45, thigh 44, shank 150.
 has_start false — только одна поза. arrow — какая точка движется сильнее всего.
 Для готовых упражнений custom заполни нулями, has_start false, arrow none.
 

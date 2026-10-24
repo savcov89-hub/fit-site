@@ -54,6 +54,35 @@ def frame(p0, p1):
     return lambda t, s: (p0[0] + u[0] * t * ln + a[0] * s, p0[1] + u[1] * t * ln + a[1] * s)
 
 
+def spine(hip, angle, flex, ln=L["torso"]):
+    """Корпус дугой: направление поворачивается на flex градусов от таза к плечам.
+    flex > 0 — сгибание вперёд (скручивание, позвоночник круглый), < 0 — прогиб назад.
+    Возвращает T(t, s) как у frame и угол направления в точке t (для поворота позвонков)."""
+    n = 40
+
+    def ang(t):
+        return angle + flex * min(t, 1.0)
+
+    def T(t, s):
+        x, y = hip
+        steps = max(1, int(n * min(t, 1.0)))
+        tt = min(t, 1.0)
+        for i in range(steps):
+            r = math.radians(ang((i + 0.5) / steps * tt))
+            x += ln * tt / steps * math.sin(r)
+            y += ln * tt / steps * math.cos(r)
+        r = math.radians(ang(t))
+        if t > 1:
+            x += ln * (t - 1) * math.sin(r)
+            y += ln * (t - 1) * math.cos(r)
+        return (x + s * math.cos(r), y - s * math.sin(r))
+    return T, ang
+
+
+def torso(P):
+    return spine(P["hip"], P["tb"], P.get("flex", 0))
+
+
 def rot(v, a):
     """Поворот вектора по часовой на a градусов (носок вниз — положительный угол)."""
     r = math.radians(a)
@@ -85,12 +114,13 @@ def leg(hip, thigh, shank, foot):
 
 
 def build(spec):
-    """spec: torso, thigh, shank, foot, upper, fore (+ thigh2… для дальних рук и ног), opt. hand/hand2 — цель кисти."""
+    """spec: torso (наклон корпуса у таза), flex (изгиб позвоночника), thigh, shank, foot, upper, fore
+    (+ thigh2… для дальних рук и ног), opt. hand/hand2 — цель кисти."""
     g = lambda k, d=0: spec.get(k, d)  # noqa: E731
     hip = (0.0, 0.0)
-    top = add(hip, g("torso"), L["torso"])
-    T = frame(hip, top)
-    P = dict(hip=hip, top=top, tb=g("torso"), joint=T(0.94, -2), head=T(1.3, -3.5), belly=T(0.35, 7.5),
+    T, _ = spine(hip, g("torso"), g("flex"))
+    top = T(1, 0)
+    P = dict(hip=hip, top=top, tb=g("torso"), flex=g("flex"), joint=T(0.94, -2), head=T(1.3, -3.5), belly=T(0.35, 7.5),
              low_back=T(0.3, -11), chest=T(0.8, 8))
     P["near"] = leg(hip, g("thigh"), g("shank"), g("foot"))
     P["far"] = leg(hip, g("thigh2", g("thigh")), g("shank2", g("shank")), g("foot2", g("foot")))
@@ -110,7 +140,7 @@ def build(spec):
 
 def samples(P):
     """Точки контура тела, чтобы поставить позу на пол и посчитать размеры."""
-    T = frame(P["hip"], P["top"])
+    T, _ = torso(P)
     out = [T(t / 10, s) for t in range(0, 11) for s in (-11.5, 7.5)]
     hx, hy = P["head"]
     out += [(hx + 8.7 * math.cos(a / 4 * math.pi), hy + 8.7 * math.sin(a / 4 * math.pi)) for a in range(8)]
@@ -138,7 +168,7 @@ def moved(P, dx, dy):
         if isinstance(v, list):
             return [mv(x) for x in v]
         return v
-    return {k: (mv(v) if k != "tb" else v) for k, v in P.items()}
+    return {k: (mv(v) if k not in ("tb", "flex") else v) for k, v in P.items()}
 
 
 def on_floor(P, floor=0.0):
@@ -206,7 +236,7 @@ def draw_arm(pen, a, J, m):
 def draw_trunk(pen, P, m):
     g = []
     hp, lg = P["hip"], P["near"]
-    T, F = frame(hp, P["top"]), frame(lg["knee"], hp)
+    (T, ang), F = torso(P), frame(lg["knee"], hp)
     gl = [T(0.27, -8.6), T(0.16, -12.4), T(0.0, -12.8), F(0.8, -6.4), F(0.62, -3.6), F(0.8, -1.4), T(0.06, -6.2)]
     g.append(f'<path class="{m("glutes")}" d="{pen.smooth(gl)}"/>')
     g.append(pen.shape(T, [(-0.04, -2.5), (0.05, -8.5), (0.27, -10), (0.32, -5.5), (0.3, 1.5), (0.17, 5.5), (0.05, 4.5), (0.0, 2)], "bone"))
@@ -227,15 +257,18 @@ def draw_trunk(pen, P, m):
         s = -6.6 + 1.6 * math.cos((t - 0.3) * 2 * math.pi / 0.9)
         x, y = pen.p(T(t, s))
         g.append(f'<rect class="vert" x="{x - 3.6:.1f}" y="{y - 3.2:.1f}" width="7.2" height="6.4" rx="1.8" '
-                 f'transform="rotate({P["tb"]:.1f} {x:.1f} {y:.1f})"/>')
+                 f'transform="rotate({ang(t):.1f} {x:.1f} {y:.1f})"/>')
     g.append(pen.shape(T, [(0.72, -9.2), (0.92, -11.4), (1.06, -10), (1.14, -5.8), (1.04, -5.2), (0.86, -7.6)], m("traps")))
-    hc = pen.p(P["head"])
-    g.append(f'<circle class="bone" cx="{hc[0]:.1f}" cy="{hc[1]:.1f}" r="20"/>')
-    jw = [T(1.22, 1), T(1.18, 7), T(1.25, 9.5), T(1.31, 8)]
-    g.append('<path class="bone" d="M' + "L".join(f"{pen.p(v)[0]:.1f} {pen.p(v)[1]:.1f}" for v in jw) + 'Z"/>')
-    eye = pen.p(T(1.33, 2.5))
-    g.append(f'<circle cx="{eye[0]:.1f}" cy="{eye[1]:.1f}" r="4.5" fill="#7d776b"/>')
+    g.append(head_at(pen, T))
     return g
+
+
+def head_at(pen, T):
+    c, a, b = pen.p(T(1.3, -3.5)), pen.p(T(1.3, 0)), pen.p(T(1.3, 1))
+    o = pen.p(T(1.2, 0))
+    up = K.norm((a[0] - o[0], a[1] - o[1]))
+    fwd = K.norm((b[0] - a[0], b[1] - a[1]))
+    return K.head(c, fwd, up)
 
 
 def draw_body(pen, P, on=(), ghost=False):
@@ -285,8 +318,9 @@ TABLE = dict(torso=-90, thigh=2, shank=92, foot=-88, **ARMS_FLOOR)
 QUAD = dict(torso=90, thigh=180, shank=-90, foot=180, upper=180, fore=180)
 
 
-def _crunch(lift):
-    return dict(HOOK, torso=-90 + lift, upper=101 + lift * 0.4, fore=96 + lift * 0.2)
+def _crunch(lift, flex):
+    """Скручивание: поясница почти на полу, позвоночник сгибается дугой, руки тянутся к коленям."""
+    return dict(HOOK, torso=-90 + lift, flex=flex, upper=104 - lift * 0.3, fore=98 - lift * 0.3)
 
 
 EXERCISES = {
@@ -294,9 +328,9 @@ EXERCISES = {
     "breathing": (None, HOOK, ["tva"], "hip", [("belly_out", "belly")]),
     "heel_slide": (HOOK, dict(HOOK, thigh=91, shank=91, foot=-70), ["tva", "abs"], "hip", [("heel", "heel")]),
     "leg_lower": (TABLE, dict(TABLE, thigh=42, shank=148, foot=-10), ["tva", "abs"], "hip", [("toe", "toe")]),
-    "head_lift": (HOOK, _crunch(24), ["abs", "tva"], "hip", [("head", "head")]),
-    "self_test": (None, dict(_crunch(18), hand=None), ["abs"], "hip", []),
-    "full_crunch": (HOOK, _crunch(62), ["abs", "hipflex"], "hip", [("head", "head")]),
+    "head_lift": (HOOK, _crunch(2, 34), ["abs", "tva"], "hip", [("head", "head")]),
+    "self_test": (None, dict(_crunch(2, 28), hand=None), ["abs"], "hip", []),
+    "full_crunch": (HOOK, _crunch(22, 58), ["abs", "hipflex"], "hip", [("head", "head")]),
     "glute_bridge": (HOOK, dict(torso=-112, thigh=66, shank=167, foot=0, upper=101, fore=93),
                      ["glutes", "hams", "tva"], "joint", [("hip", "hip")]),
     "dead_bug_legs": (TABLE, dict(TABLE, thigh=74, shank=74, foot=-30), ["abs", "tva"], "hip", [("heel", "heel")]),
@@ -315,7 +349,7 @@ def resolve(spec, P0=None):
     if spec.get("hand", 0) is None:
         # кисть на живот, пальцы на средней линии
         P = build({k: v for k, v in spec.items() if k != "hand"})
-        spec["hand"] = frame(P["hip"], P["top"])(0.45, 9)
+        spec["hand"] = torso(P)[0](0.45, 9)
         spec["bend"] = -1
     return build(spec)
 
@@ -344,8 +378,8 @@ def side_plank(pen, on, xform=None):
     for t in (0.8, 0.85, 0.9, 0.95):
         a, b, c = pen.p(F(t, -12.5)), pen.p(F(t - 0.03, 0)), pen.p(F(t, 12.5))
         g.append(f'<path class="lead" style="stroke:#7d776b" d="M{a[0]:.1f} {a[1]:.1f}Q{b[0]:.1f} {b[1]:.1f} {c[0]:.1f} {c[1]:.1f}"/>')
-    hc = pen.p(F(1.12, 0))
-    g.append(f'<circle class="bone" cx="{hc[0]:.1f}" cy="{hc[1]:.1f}" r="20"/>')
+    hc, h0 = pen.p(F(1.12, 0)), pen.p(F(1.0, 0))
+    g.append(K.head_front(hc, K.norm((hc[0] - h0[0], hc[1] - h0[1]))))
     sh_lo, sh_hi = F(1.0, 17), F(1.0, -17)
     g.append(f'<path class="bone" d="M{pen.p(sh_hi)[0]:.1f} {pen.p(sh_hi)[1]:.1f}L{pen.p(sh_lo)[0]:.1f} {pen.p(sh_lo)[1]:.1f}" style="stroke-width:5"/>')
     elbow = (sh_lo[0], 3.0)
@@ -362,8 +396,7 @@ def side_plank(pen, on, xform=None):
 
 def point(P, name):
     if name == "belly_out":
-        T = frame(P["hip"], P["top"])
-        return T(0.35, 22)
+        return torso(P)[0](0.35, 22)
     return P[name]
 
 
