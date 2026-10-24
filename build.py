@@ -5,6 +5,7 @@ Cloudflare Pages: Build command `pip install -r requirements.txt && python3 buil
 Build output directory `public`.
 """
 import datetime as dt
+import hashlib
 import html
 import json
 import re
@@ -19,6 +20,8 @@ OUT = ROOT / "public"
 SITE = json.loads((ROOT / "site.json").read_text(encoding="utf-8"))
 BASE = SITE["base_url"].rstrip("/")
 PORTRAIT = SITE.get("portrait", "")
+# версия стилей в ссылке: после правки style.css браузер не берёт старый файл из кэша
+CSS_VERSION = hashlib.md5((ROOT / "static" / "style.css").read_bytes()).hexdigest()[:8]
 
 MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля",
           "августа", "сентября", "октября", "ноября", "декабря"]
@@ -102,7 +105,7 @@ def head(title, description, path, extra="", image=None):
 <meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
 <link rel="preload" href="/fonts/montserrat-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/style.css?v={CSS_VERSION}">
 <script>document.documentElement.classList.add("js")</script>
 {verif}{extra}{metrika}
 </head>
