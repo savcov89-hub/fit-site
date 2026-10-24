@@ -1,4 +1,5 @@
-"""Дорисовывает SVG-картинки к уже вышедшим статьям: под каждый подзаголовок без картинки.
+"""Дорисовывает SVG-картинки к уже вышедшим статьям: под каждый подзаголовок без картинки
+и схемы скелета к описанным упражнениям, если их в статье ещё нет.
 
 python3 agent/add_figures.py                 # все статьи, где не хватает картинок
 python3 agent/add_figures.py --slug <slug>   # одна статья
@@ -29,7 +30,7 @@ def main():
         head, body = raw.split("\n---\n", 1)
         meta = json.loads(head.removeprefix("---\n"))
         slug = meta.get("slug", path.stem)
-        if not figures.missing(body):
+        if not figures.missing(body) and figures.has_moves(body):
             continue
         meter = W.Meter()
         body, n = figures.add(client, meter, W.create, W.MODEL, body, slug,
@@ -37,7 +38,7 @@ def main():
         path.write_text(head + "\n---\n" + body.strip() + "\n", encoding="utf-8")
         usd = meter.usd()
         W.log_usage(f"картинки: {meta.get('keyword', slug)}", usd, meter.tin, meter.tout, 0, model=W.MODEL)
-        print(f"{slug}: картинок +{n}, ${usd:.3f}")
+        print(f"{slug}: картинок и схем +{n}, ${usd:.3f}")
 
 
 if __name__ == "__main__":
