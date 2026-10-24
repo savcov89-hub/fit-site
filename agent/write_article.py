@@ -36,6 +36,7 @@ ARTICLES = ROOT / "content" / "articles"
 TOPICS = AGENT / "topics.csv"
 USAGE = AGENT / "usage.csv"
 PHOTOS = ROOT / "content" / "photos"
+PAGES = ROOT / "content" / "pages"
 STOCK_DIR = ROOT / "static" / "img"
 
 MODEL = os.environ.get("MODEL", "claude-opus-5-5")
@@ -203,12 +204,34 @@ def research(client, meter, keyword, related):
     sys.exit("Поиск: слишком много пауз, попробуйте позже.")
 
 
+def service_pages():
+    """Страницы услуг сайта (content/pages, кроме главной): на них статья ставит местную ссылку."""
+    items = []
+    for f in sorted(PAGES.glob("*.md")):
+        if f.stem == "home":
+            continue
+        head = f.read_text(encoding="utf-8").split("\n---\n", 1)[0].removeprefix("---\n")
+        try:
+            meta = json.loads(head)
+        except json.JSONDecodeError:
+            continue
+        if not meta.get("draft"):
+            items.append({"title": meta.get("title", f.stem), "slug": meta.get("slug", f.stem)})
+    return items
+
+
 def write(client, meter, keyword, related, notes, existing, photos):
     style = (AGENT / "style.md").read_text(encoding="utf-8")
     seo_rules = (AGENT / "seo.md").read_text(encoding="utf-8")
     local = (AGENT / "local.md").read_text(encoding="utf-8")
     rel = "\n".join(f"- {q}" for q in related) or "(нет)"
     links = "\n".join(f"- {a['title']}: /stati/{a['slug']}/" for a in existing) or "(пока статей нет)"
+    pages = "\n".join(f"- {p['title']}: /{p['slug']}/" for p in service_pages()) or "(пока нет)"
+    local_hint = ""
+    if "новосиб" in keyword.lower():
+        local_hint = ("Это местный запрос: город — в H1, seo_title и первом абзаце, естественно. Про клуб и "
+                      "Михаила — только факты из раздела о местном контексте. Без рейтингов «лучших тренеров» "
+                      "и сравнения с конкретными людьми.\n\n")
     photo_list = "\n".join(f"- {p['file']}: {p['description']}" for p in photos) or "(пока фото нет)"
     system = (
         "Ты пишешь статьи для личного сайта персонального тренера Михаила Савцова. "
@@ -221,6 +244,10 @@ def write(client, meter, keyword, related, notes, existing, photos):
         f"{rel}\n\n"
         f"Выжимка исследования (используй только эти факты и источники):\n{notes}\n\n"
         f"Статьи сайта, на которые можно поставить внутренние ссылки (2–3, только по теме):\n{links}\n\n"
+        f"Страницы услуг Михаила в Новосибирске. Если одна из них по теме статьи, поставь на неё одну "
+        f"ссылку в последнем разделе, текст ссылки с городом («тренировки при боли в спине в "
+        f"Новосибирске»); если ни одна не подходит, не ставь:\n{pages}\n\n"
+        + local_hint +
         "Фото Михаила (его тренировки и клиенты в зале), можно взять на обложку и вставить в текст "
         "через ![описание](/photos/<файл>), только если фото действительно по теме:\n"
         f"{photo_list}\n\n"
