@@ -7,11 +7,13 @@
 Шаг 3: SEO-проверка (agent/seo.py); найденные проблемы правит короткий вызов редактора,
        остальное попадает в отчёт для PR.
 Статья сохраняется в content/articles/<slug>.md, тема помечается done,
-расход пишется в agent/usage.csv.
+расход пишется в agent/usage.csv. Тема статьи (category) берётся из колонки category
+в topics.csv, а если там пусто — её выбирает модель из списка тем в site.json.
+Запросы, по которым статья уже есть, пропускаются, чтобы не писать одно и то же дважды.
 
 Запуск: ANTHROPIC_API_KEY=... python3 agent/write_article.py [--topic "запрос"]
 Переменные: MODEL (по умолчанию claude-opus-5-5), RESEARCH_MODEL (по умолчанию claude-haiku-5-5),
-MONTH_LIMIT_USD (по умолчанию 25), REPORT_FILE (куда записать отчёт для PR).
+MONTH_LIMIT_USD (по умолчанию 70), REPORT_FILE (куда записать отчёт для PR).
 """
 import argparse
 import csv
@@ -37,10 +39,12 @@ TOPICS = AGENT / "topics.csv"
 USAGE = AGENT / "usage.csv"
 PHOTOS = ROOT / "content" / "photos"
 STOCK_DIR = ROOT / "static" / "img"
+CATEGORIES = {c["slug"]: c for c in
+              json.loads((ROOT / "site.json").read_text(encoding="utf-8")).get("categories", [])}
 
 MODEL = os.environ.get("MODEL", "claude-opus-5-5")
 RESEARCH_MODEL = os.environ.get("RESEARCH_MODEL", "claude-haiku-5-5")
-MONTH_LIMIT_USD = float(os.environ.get("MONTH_LIMIT_USD", "25"))
+MONTH_LIMIT_USD = float(os.environ.get("MONTH_LIMIT_USD", "70"))
 BETAS = ["server-side-fallback-2026-07-01"]
 
 # $ за 1 млн токенов (вход, выход) и за 1000 поисков.
@@ -64,6 +68,8 @@ ARTICLE_SCHEMA = {
         "seo_title": {"type": "string", "description": "title страницы, до 65 символов"},
         "description": {"type": "string", "description": "meta description, 120–160 символов"},
         "slug": {"type": "string", "description": "адрес латиницей через дефис, 3–6 слов"},
+        "category": {"type": "string", "enum": list(CATEGORIES) or ["none"],
+                     "description": "тема статьи из списка тем сайта"},
         "tags": {"type": "array", "items": {"type": "string"}},
         "body_markdown": {"type": "string",
                           "description": "текст статьи в Markdown без H1, разделы с ## и ###"},
@@ -87,7 +93,7 @@ ARTICLE_SCHEMA = {
             },
             "required": ["own_photo", "stock_query", "alt"], "additionalProperties": False},
     },
-    "required": ["title", "seo_title", "description", "slug", "tags", "body_markdown", "faq", "sources",
+    "required": ["title", "seo_title", "description", "slug", "category", "tags", "body_markdown", "faq", "sources",
                  "cover"],
     "additionalProperties": False,
 }
@@ -99,7 +105,7 @@ def slugify(text):
     return s[:70].rstrip("-") or "statya"
 
 
-TOPIC_FIELDS = ["keyword", "status", "slug", "cluster", "related"]
+TOPIC_FIELDS = ["keyword", "status", "slug", "cluster", "category", "related"]
 
 
 def read_topics():
@@ -210,6 +216,7 @@ def write(client, meter, keyword, related, notes, existing, photos):
     rel = "\n".join(f"- {q}" for q in related) or "(нет)"
     links = "\n".join(f"- {a['title']}: /stati/{a['slug']}/" for a in existing) or "(пока статей нет)"
     photo_list = "\n".join(f"- {p['file']}: {p['description']}" for p in photos) or "(пока фото нет)"
+    cats = "\n".join(f"- {c['slug']}: {c['name']} ({c['description']})" for c in CATEGORIES.values())
     system = (
         "Ты пишешь статьи для личного сайта персонального тренера Михаила Савцова. "
         "Статья выходит от его имени. Следуй правилам ниже строго.\n\n" + style + "\n\n" + seo_rules
@@ -221,6 +228,7 @@ def write(client, meter, keyword, related, notes, existing, photos):
         f"{rel}\n\n"
         f"Выжимка исследования (используй только эти факты и источники):\n{notes}\n\n"
         f"Статьи сайта, на которые можно поставить внутренние ссылки (2–3, только по теме):\n{links}\n\n"
+        f"Темы сайта, в category поставь одну самую подходящую:\n{cats}\n\n"
         "Фото Михаила (его тренировки и клиенты в зале), можно взять на обложку и вставить в текст "
         "через ![описание](/photos/<файл>), только если фото действительно по теме:\n"
         f"{photo_list}\n\n"
@@ -280,7 +288,8 @@ def existing_articles():
             meta = json.loads(head)
         except json.JSONDecodeError:
             continue
-        items.append({"title": meta.get("title", f.stem), "slug": meta.get("slug", f.stem)})
+        items.append({"title": meta.get("title", f.stem), "slug": meta.get("slug", f.stem),
+                      "keyword": meta.get("keyword", "")})
     return items
 
 
@@ -294,6 +303,12 @@ def main():
         sys.exit(f"Лимит месяца исчерпан: потрачено ${spent:.2f} из ${MONTH_LIMIT_USD:.2f}.")
 
     rows = read_topics()
+    existing = existing_articles()
+    # по запросу уже есть статья (например, написали вручную) — тему закрываем, не повторяем
+    written = {a["keyword"].strip().lower(): a["slug"] for a in existing if a["keyword"]}
+    for r in rows:
+        if r["status"] == "todo" and r["keyword"].strip().lower() in written:
+            r["status"], r["slug"] = "done", written[r["keyword"].strip().lower()]
     if args.topic:
         keyword = args.topic.strip()
         row = next((r for r in rows if r["keyword"] == keyword), None)
@@ -308,7 +323,6 @@ def main():
 
     client = anthropic.Anthropic()
     meter = Meter()
-    existing = existing_articles()
     related = [q.strip() for q in row.get("related", "").split("|") if q.strip()]
     print(f"Тема: {keyword}")
     notes = research(client, meter, keyword, related)
@@ -328,6 +342,7 @@ def main():
         "description": art["description"],
         "slug": slug,
         "date": dt.date.today().isoformat(),
+        "category": row["category"] if row["category"] in CATEGORIES else art["category"],
         "keyword": keyword,
         "tags": art["tags"],
         "faq": art["faq"],
@@ -357,7 +372,7 @@ def main():
     out.write_text("---\n" + json.dumps(meta, ensure_ascii=False, indent=2) + "\n---\n"
                    + art["body_markdown"].strip() + "\n", encoding="utf-8")
 
-    row["status"], row["slug"] = "done", slug
+    row["status"], row["slug"], row["category"] = "done", slug, meta["category"]
     write_topics(rows)
     usd = meter.usd()
     log_usage(keyword, usd, meter.tin, meter.tout, meter.searches)

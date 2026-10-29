@@ -20,6 +20,8 @@ OUT = ROOT / "public"
 SITE = json.loads((ROOT / "site.json").read_text(encoding="utf-8"))
 BASE = SITE["base_url"].rstrip("/")
 PORTRAIT = SITE.get("portrait", "")
+# темы статей: страница /stati/<slug>/, метка на карточке
+CATEGORIES = {c["slug"]: c for c in SITE.get("categories", [])}
 # версия стилей в ссылке: после правки style.css браузер не берёт старый файл из кэша
 CSS_VERSION = hashlib.md5((ROOT / "static" / "style.css").read_bytes()).hexdigest()[:8]
 
@@ -135,6 +137,8 @@ if(window.ym){{ym({esc(SITE.get("yandex_metrika_id") or 0)},"reachGoal",g)}}if(w
 (function(){{var els=document.querySelectorAll(".reveal");if(!("IntersectionObserver" in window)){{els.forEach(function(e){{e.classList.add("in")}});return}}
 var io=new IntersectionObserver(function(es){{es.forEach(function(e){{if(e.isIntersecting){{e.target.classList.add("in");io.unobserve(e.target)}}}})}},{{rootMargin:"0px 0px -8% 0px"}});
 els.forEach(function(e){{io.observe(e)}})}})();
+(function(){{var on=document.querySelector(".cats .on");if(!on)return;var n=on.parentNode;
+n.scrollLeft+=on.getBoundingClientRect().left-n.getBoundingClientRect().left-16}})();
 </script>
 </body>
 </html>
@@ -214,6 +218,11 @@ def load_articles():
         if meta.get("draft"):
             continue
         meta.setdefault("slug", f.stem)
+        if meta["slug"] in CATEGORIES:
+            raise SystemExit(f"{f.name}: адрес статьи совпадает с темой /stati/{meta['slug']}/")
+        if meta.get("category") not in CATEGORIES:
+            print(f"Внимание: у {f.name} нет темы или тема неизвестна ({meta.get('category')!r})")
+            meta["category"] = None
         meta["body"] = body
         items.append(meta)
     items.sort(key=lambda a: a["date"], reverse=True)
@@ -230,6 +239,7 @@ def article_jsonld(a, url):
         "dateModified": a.get("updated", a["date"]),
         "inLanguage": "ru",
         "mainEntityOfPage": url,
+        **({"articleSection": CATEGORIES[a["category"]]["name"]} if a.get("category") else {}),
         **({"image": BASE + a["image"]} if a.get("image") else {}),
         "author": {"@type": "Person", "name": SITE["author"], "jobTitle": SITE["author_role"],
                    "url": BASE + "/"},
@@ -264,7 +274,9 @@ def render_article(a, all_articles):
         ) + "</ol></section>"
     related = [x for x in all_articles if x["slug"] != a["slug"]]
     tags = set(a.get("tags", []))
-    related.sort(key=lambda x: -len(tags & set(x.get("tags", []))))
+    # сначала статьи той же темы, внутри — по общим тегам
+    related.sort(key=lambda x: (x.get("category") != a.get("category") or not a.get("category"),
+                                -len(tags & set(x.get("tags", [])))))
     rel_html = ""
     if related:
         rel_html = "<section class=\"related\"><h2>Ещё по теме</h2>" + article_list(related[:4]) + "</section>"
@@ -274,12 +286,16 @@ def render_article(a, all_articles):
         if a.get("image_credit"):
             credit = f'<figcaption><a href="{esc(a.get("image_credit_url", "#"))}" rel="nofollow noopener" target="_blank">{esc(a["image_credit"])}</a></figcaption>'
         cover = f'<figure class="cover"><img src="{esc(a["image"])}" alt="{esc(a.get("image_alt", a["title"]))}" width="1200" height="800">{credit}</figure>'
+    crumb_cat = ""
+    if a.get("category"):
+        c = CATEGORIES[a["category"]]
+        crumb_cat = f'<span>/</span><a href="/stati/{esc(c["slug"])}/">{esc(c["name"])}</a>'
     words = len(a["body"].split())
     minutes = max(1, round(words / 180))
     page = head(a.get("seo_title", a["title"]), a["description"], path, article_jsonld(a, BASE + path),
                 a.get("image"))
     page += f"""<article class="post wrap narrow">
-<p class="crumbs"><a href="/">Главная</a><span>/</span><a href="/stati/">Статьи</a></p>
+<p class="crumbs"><a href="/">Главная</a><span>/</span><a href="/stati/">Статьи</a>{crumb_cat}</p>
 <h1>{esc(a["title"])}</h1>
 <div class="byline">{portrait("avatar", 240, 240, small=True)}<div><b>{esc(SITE["author"])}</b><br><span class="muted">{esc(SITE["author_role"].capitalize())} · {ru_date(a["date"])} · {minutes} мин чтения</span></div></div>
 {cover}
@@ -300,10 +316,17 @@ def render_article(a, all_articles):
     return path
 
 
+def card_meta(a):
+    cat = ""
+    if a.get("category"):
+        cat = f'<span class="card-cat">{esc(CATEGORIES[a["category"]]["name"])}</span>'
+    return f'<span class="card-meta">{cat}<span class="card-date">{ru_date(a["date"])}</span></span>'
+
+
 def article_list(items):
     return "<ul class=\"cards\">" + "".join(
         f'<li class="card reveal"><a href="/stati/{esc(a["slug"])}/">'
-        f'<span class="card-date">{ru_date(a["date"])}</span>'
+        f'{card_meta(a)}'
         f'<span class="card-title">{esc(a["title"])}</span>'
         f'<span class="card-text">{esc(a["description"])}</span>'
         f'<span class="card-more">Читать →</span></a></li>'
@@ -387,6 +410,23 @@ def render_index(items):
     (OUT / "index.html").write_text(page, encoding="utf-8")
 
 
+def category_nav(items, active=None):
+    """Ряд тем над списком статей. Темы без статей не показываются."""
+    counts = {}
+    for a in items:
+        if a.get("category"):
+            counts[a["category"]] = counts.get(a["category"], 0) + 1
+    if not counts:
+        return ""
+    links = [("/stati/", "Все", len(items), active is None)]
+    links += [(f"/stati/{slug}/", c["name"], counts[slug], slug == active)
+              for slug, c in CATEGORIES.items() if slug in counts]
+    return '<nav class="cats" aria-label="Темы статей">' + "".join(
+        f'<a href="{href}"{" class=\"on\" aria-current=\"page\"" if on else ""}>{esc(name)}<span>{n}</span></a>'
+        for href, name, n, on in links
+    ) + "</nav>"
+
+
 def render_list(items):
     page = head(f"Статьи о тренировках и питании — {SITE['author']}",
                 "Статьи о силовых тренировках, технике упражнений и питании на основе исследований.",
@@ -395,10 +435,41 @@ def render_list(items):
     page += (f'<section class="block page-head"><div class="wrap"><p class="kicker">Блог тренера</p>'
              f'<h1>Статьи</h1><p class="lead">Силовые тренировки, техника упражнений и питание. '
              f'Каждая статья опирается на исследования, ссылки в конце.</p>'
-             f'{article_list(items)}{empty}</div></section>')
+             f'{category_nav(items)}{article_list(items)}{empty}</div></section>')
     page += foot()
     (OUT / "stati").mkdir(parents=True, exist_ok=True)
     (OUT / "stati" / "index.html").write_text(page, encoding="utf-8")
+
+
+def render_categories(items):
+    """Страница каждой темы со статьями: /stati/<slug>/. Возвращает пути для sitemap."""
+    paths = []
+    for slug, c in CATEGORIES.items():
+        own = [a for a in items if a.get("category") == slug]
+        if not own:
+            continue
+        path = f"/stati/{slug}/"
+        crumbs = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "Главная", "item": BASE + "/"},
+                {"@type": "ListItem", "position": 2, "name": "Статьи", "item": BASE + "/stati/"},
+                {"@type": "ListItem", "position": 3, "name": c["name"], "item": BASE + path},
+            ],
+        }
+        extra = f'<script type="application/ld+json">{json.dumps(crumbs, ensure_ascii=False)}</script>'
+        page = head(f"{c['name']}: статьи тренера — {SITE['author']}", c["description"], path, extra)
+        page += (f'<section class="block page-head"><div class="wrap">'
+                 f'<p class="crumbs"><a href="/">Главная</a><span>/</span><a href="/stati/">Статьи</a></p>'
+                 f'<h1>{esc(c["name"])}</h1><p class="lead">{esc(c["description"])}</p>'
+                 f'{category_nav(items, slug)}{article_list(own)}</div></section>')
+        page += foot()
+        out = OUT / "stati" / slug / "index.html"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(page, encoding="utf-8")
+        paths.append((path, max(a.get("updated", a["date"]) for a in own)))
+    return paths
 
 
 def render_sitemap(paths):
@@ -434,6 +505,7 @@ def main():
         paths.append((render_article(a, items), a.get("updated", a["date"])))
     render_index(items)
     render_list(items)
+    paths += render_categories(items)
     render_404()
     render_sitemap(paths)
     print(f"Готово: {len(items)} статей в {OUT}")
