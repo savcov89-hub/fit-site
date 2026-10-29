@@ -180,13 +180,12 @@ def draw_range(f):
     out = [head]
     for i in items:
         a, b = sorted((i["value"], i["value2"]))
-        out.append(text(x0, y + 4, wrap(i["label"], 52)[0]))
+        note = i["note"] or (f"{fmt(a)}–{fmt(b)}" if a != b else fmt(a))
+        # цифра справа в строке подписи: не налезает на шкалу и не вылезает за край при полосе во всю ширину
+        out.append(text(x0, y + 4, wrap(i["label"], max(12, 50 - len(note) * 2))[0]))
+        out.append(text(x1, y + 4, note, "t", "end"))
         out.append(f'<line class="track" x1="{x0}" y1="{y + 26}" x2="{x1}" y2="{y + 26}"/>')
         out.append(f'<rect class="barfill" x="{X(a):.0f}" y="{y + 16}" width="{max(8, X(b) - X(a)):.0f}" height="20" rx="10"/>')
-        note = i["note"] or (f"{fmt(a)}–{fmt(b)}" if a != b else fmt(a))
-        anchor = "end" if X(b) > x1 - 90 else "start"
-        tx = X(a) - 10 if anchor == "end" else X(b) + 10
-        out.append(text(tx, y + 32, note, "t", anchor))
         y += 66
     out.append(text(x0, y + 4, fmt(lo), "s small"))
     out.append(text(x1, y + 4, fmt(hi), "s small", "end"))
@@ -369,12 +368,13 @@ MOVES_SCHEMA = {
                 "cues": {"type": "array", "items": {"type": "string"}, "description": "1–2 подсказки по технике, каждая до 60 символов"},
                 "highlight": {"type": "array", "items": {"type": "string", "enum": M.MUSCLES}},
                 "verdict": {"type": "string", "enum": ["none", "ok", "bad"]},
+                "bar": {"type": "string", "enum": ["none", "back", "hands"]},
                 "custom": {"type": "object", "properties": {
                     "has_start": {"type": "boolean"}, "start": POSE_ANGLES, "end": POSE_ANGLES,
                     "arrow": {"type": "string", "enum": POINTS}},
                     "required": ["has_start", "start", "end", "arrow"], "additionalProperties": False},
             },
-            "required": ["after", "exercise", "title", "cues", "highlight", "verdict", "custom"],
+            "required": ["after", "exercise", "title", "cues", "highlight", "verdict", "bar", "custom"],
             "additionalProperties": False}},
     },
     "required": ["moves"],
@@ -385,7 +385,7 @@ MOVES_PROMPT = """Ниже статья для сайта тренера. Най
 описана (поза, как двигаться, на что смотреть), и подбери к нему схему: скелет с мышцами, вид сбоку,
 начальная поза бледно, конечная ярко, рабочие мышцы подсвечены. Одно упражнение — одна схема.
 Не нужно: голые названия упражнений в списке программы без описания техники, упражнения в тренажёре или
-со скамьёй (снаряды не рисуются), просто упоминания вида спорта («кардио», «ходьба»), бытовые советы.
+со скамьёй (тренажёры и скамьи не рисуются; штанга рисуется, см. bar), просто упоминания вида спорта («кардио», «ходьба»), бытовые советы.
 Упражнение из списка «пока не делай» можно дать с verdict bad, одно на статью.
 Если упражнений с описанием техники нет — верни пустой список.
 
@@ -411,9 +411,12 @@ upper — от плеча к локтю, fore — от локтя к кисти.
 вперёд (спина круглая, как в скручивании: 30–60), меньше нуля — прогиб назад. Поза сама встаёт на пол.
 Позвоночник не палка: в скручиваниях, подъёмах корпуса, «кошке», наклонах с круглой спиной задавай flex,
 torso при этом — наклон нижней части спины (у таза).
-Примеры (flex 0, если не сказано иначе): стойка torso 0, thigh 180, shank 180, foot 0, upper 180, fore 180; присед без веса torso 40, thigh 92,
-shank 150, foot 0, upper 90, fore 90; наклон с прямой спиной torso 75, thigh 172, shank 176, foot 0, upper 180,
-fore 180; выпад вперёд torso 0, thigh 100, shank 165, thigh2 200, shank2 260, foot2 60; лёжа на спине —
+shank больше 180 — колено впереди стопы (присед, выпад, наклон с согнутыми коленями), меньше 180 — стопа
+впереди колена, в стоячих упражнениях так не бывает.
+Примеры (flex 0, если не сказано иначе): стойка torso 0, thigh 180, shank 180, foot 0, upper 180, fore 180; присед без веса torso 45, thigh 92,
+shank 215, foot 0, upper 90, fore 90; присед со штангой на спине torso 48, thigh 95, shank 208, upper 200, fore 20;
+наклон с прямой спиной (румынская тяга) torso 64, thigh 142, shank 182, foot 0, upper 180, fore 180;
+тяга в наклоне torso 50, thigh 150, shank 182; выпад вперёд torso 0, thigh 100, shank 190, thigh2 200, shank2 260, foot2 60; лёжа на спине —
 torso -90, на животе и на четвереньках — torso 90; скручивание лёжа — torso -88, flex 45, thigh 44, shank 150.
 has_start false — только одна поза. arrow — какая точка движется сильнее всего.
 Для готовых упражнений custom заполни нулями, has_start false, arrow none.
@@ -423,6 +426,8 @@ has_start false — только одна поза. arrow — какая точ�
 - title — название упражнения по-русски; cues — 1–2 подсказки из текста статьи, коротко, на «ты».
 - highlight — какие мышцы работают в упражнении (если пусто, возьмутся мышцы по умолчанию).
 - verdict: bad — упражнение из списка «пока не делай», ok — правильный вариант рядом с ошибкой, иначе none.
+- bar: back — штанга на спине (приседания со штангой; руки держат гриф у плеч: upper 200, fore 20),
+  hands — штанга или гантели в руках (тяги, румынская тяга), none — без снаряда.
 - Без призывов и медицинских обещаний.
 
 Статья:
