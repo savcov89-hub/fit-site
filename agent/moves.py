@@ -32,8 +32,9 @@ STYLE = """<style>
 .mark{stroke:#fff;stroke-width:3.5;fill:none;stroke-linecap:round}
 .floor{stroke:#b9b5aa;stroke-width:3}.equip{fill:#d9d5ca;stroke:#8f8a7e;stroke-width:2}
 .cable{stroke:#8f8a7e;stroke-width:2;stroke-dasharray:6 5}
+.plate{fill:#3a3a37;fill-opacity:.1;stroke:#3a3a37;stroke-width:3}.barc{fill:#3a3a37}.ghostbar{opacity:.3}
 @media (prefers-color-scheme:dark){.legend{fill:#f59b72}.cue{fill:#a9a8a1}.ttl{fill:#ecebe6}
-.lg{fill:#f0703f}.floor{stroke:#55534d}.equip{fill:#2c2c30;stroke:#77756d}.cable{stroke:#77756d}}
+.lg{fill:#f0703f}.floor{stroke:#55534d}.plate{fill:#ecebe6;fill-opacity:.12;stroke:#bdbbb3}.barc{fill:#bdbbb3}.equip{fill:#2c2c30;stroke:#77756d}.cable{stroke:#77756d}}
 </style>"""
 
 
@@ -402,7 +403,8 @@ def point(P, name):
 
 def draw_exercise(f):
     """f: exercise, title, cues (список), highlight (необязательно), verdict ok|bad|none;
-    для custom ещё start (или None), end — словари углов, arrow — точка для стрелки."""
+    для custom ещё start (или None), end — словари углов, arrow — точка для стрелки;
+    bar: back — штанга на спине (присед), hands — в руках (тяги), none или нет поля — без штанги."""
     if f["exercise"] == "custom":
         pt = f.get("arrow", "none")
         start, end, muscles, anchor = f.get("start"), f["end"], [], "hip"
@@ -447,6 +449,14 @@ def draw_exercise(f):
         if A:
             out.append(draw_body(pen, A, ghost=True))
         out.append(draw_body(pen, B, on=on))
+        bar = f.get("bar", "none")
+        if bar in ("back", "hands"):
+            for P, ghost in ([(A, True)] if A else []) + [(B, False)]:
+                # гриф на трапециях чуть позади плеча или в кистях
+                x, y_ = pen.p(torso(P)[0](0.97, -9) if bar == "back" else P["hand"])
+                out.append(f'<g{" class=\"ghostbar\"" if ghost else ""}>'
+                           f'<circle class="plate" cx="{x:.1f}" cy="{y_:.1f}" r="40"/>'
+                           f'<circle class="barc" cx="{x:.1f}" cy="{y_:.1f}" r="6"/></g>')
     for a, b in arrows:
         p0 = pen.p(point(A or B, a))
         p1 = pen.p(point(B, b))
