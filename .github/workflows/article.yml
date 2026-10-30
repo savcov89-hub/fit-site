@@ -1,18 +1,18 @@
 name: write-article
 
 on:
-  schedule:
-    # Три статьи в день: 09:23, 13:17 и 17:41 по Новосибирску (время в cron — UTC).
-    # Не ровно в начале часа: в :00 GitHub перегружен
-    # и откладывает запуски по расписанию на часы (23.10 старт был в 15:13).
-    - cron: "23 2 * * *"
-    - cron: "17 6 * * *"
-    - cron: "41 10 * * *"
+  # Расписание GitHub (schedule) опаздывало на 5–6 часов, поэтому его нет.
+  # Три статьи в день (09:23, 13:17 и 17:41 по Новосибирску) запускает cron-job.org
+  # задачами «Агент статей»: POST в API workflow_dispatch с source=cron.
   workflow_dispatch:
     inputs:
       topic:
         description: "Запрос для статьи (пусто — следующий из agent/topics.csv)"
         required: false
+      source:
+        description: "Кто запустил: manual или cron (cron проверяет дневную норму)"
+        required: false
+        default: manual
 
 permissions:
   contents: write
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # Не больше ARTICLES_PER_DAY статей в день (по умолчанию 3): если часть уже вышла
-      # вручную или задержанные запуски сбились в кучу, лишний запуск по расписанию пропускается.
+      # вручную, лишний запуск по расписанию (source=cron) пропускается.
       - name: Проверить, сколько статей уже вышло сегодня
         id: guard
         env:
@@ -39,7 +39,7 @@ jobs:
           today=$(date -u +%F)
           n=$(grep -l "\"date\": \"$today\"" content/articles/*.md | wc -l)
           echo "Статей за $today: $n из $PER_DAY"
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$n" -ge "$PER_DAY" ]; then
+          if [ "${{ inputs.source }}" = "cron" ] && [ "$n" -ge "$PER_DAY" ]; then
             echo "Норма на сегодня выполнена, пропускаю."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
