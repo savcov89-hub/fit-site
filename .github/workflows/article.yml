@@ -1,9 +1,13 @@
 name: write-article
 
 on:
-  # Расписание GitHub (schedule) опаздывало на 5–6 часов, поэтому его нет.
-  # Три статьи в день (09:23, 13:17 и 17:41 по Новосибирску) запускает cron-job.org
-  # задачами «Агент статей»: POST в API workflow_dispatch с source=cron.
+  # Расписание GitHub (schedule) опаздывает на 5–6 часов. Оно временно остаётся запасным,
+  # пока не заработают задачи «Агент статей» на cron-job.org (POST в API workflow_dispatch
+  # с source=cron в 09:23, 13:17 и 17:41 по Новосибирску). Потом schedule убрать.
+  schedule:
+    - cron: "23 2 * * *"
+    - cron: "17 6 * * *"
+    - cron: "41 10 * * *"
   workflow_dispatch:
     inputs:
       topic:
@@ -39,7 +43,7 @@ jobs:
           today=$(date -u +%F)
           n=$(grep -l "\"date\": \"$today\"" content/articles/*.md | wc -l)
           echo "Статей за $today: $n из $PER_DAY"
-          if [ "${{ inputs.source }}" = "cron" ] && [ "$n" -ge "$PER_DAY" ]; then
+          if { [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.source }}" = "cron" ]; } && [ "$n" -ge "$PER_DAY" ]; then
             echo "Норма на сегодня выполнена, пропускаю."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
