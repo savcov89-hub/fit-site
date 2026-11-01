@@ -55,7 +55,7 @@ def frame(p0, p1):
     return lambda t, s: (p0[0] + u[0] * t * ln + a[0] * s, p0[1] + u[1] * t * ln + a[1] * s)
 
 
-def spine(hip, angle, flex, ln=L["torso"], flex0=0.0):
+def spine(hip, angle, flex, ln=L["torso"], flex0=0.0, flex1=1.0):
     """Корпус дугой: направление поворачивается на flex градусов от таза к плечам.
     flex > 0 — сгибание вперёд (скручивание, позвоночник круглый), < 0 — прогиб назад.
     Возвращает T(t, s) как у frame и угол направления в точке t (для поворота позвонков)."""
@@ -63,7 +63,8 @@ def spine(hip, angle, flex, ln=L["torso"], flex0=0.0):
 
     def ang(t):
         # flex0 — с какой доли длины начинается изгиб: 0.4 — поясница прямая, сгибается только грудной отдел
-        return angle + flex * max(0.0, min(t, 1.0) - flex0) / (1 - flex0)
+        # flex1 — где изгиб кончается: 0.55 — гнётся поясница, грудной отдел прямой (обратные скручивания)
+        return angle + flex * max(0.0, min(min(t, 1.0), flex1) - flex0) / (flex1 - flex0)
 
     def T(t, s):
         x, y = hip
@@ -82,7 +83,7 @@ def spine(hip, angle, flex, ln=L["torso"], flex0=0.0):
 
 
 def torso(P):
-    return spine(P["hip"], P["tb"], P.get("flex", 0), flex0=P.get("flex0", 0))
+    return spine(P["hip"], P["tb"], P.get("flex", 0), flex0=P.get("flex0", 0), flex1=P.get("flex1", 1))
 
 
 def rot(v, a):
@@ -94,7 +95,7 @@ def rot(v, a):
 def ik(j, target, l1=L["upper"], l2=L["fore"], bend=1):
     """Углы плеча и предплечья, чтобы кисть дошла до точки (или потянулась к ней)."""
     dx, dy = target[0] - j[0], target[1] - j[1]
-    d = min(math.hypot(dx, dy), l1 + l2 - 0.01)
+    d = max(0.01, min(math.hypot(dx, dy), l1 + l2 - 0.01))
     base = math.degrees(math.atan2(dx, dy))
     c = max(-1, min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)))
     a1 = base + bend * math.degrees(math.acos(c))
@@ -120,9 +121,9 @@ def build(spec):
     (+ thigh2… для дальних рук и ног), opt. hand/hand2 — цель кисти."""
     g = lambda k, d=0: spec.get(k, d)  # noqa: E731
     hip = (0.0, 0.0)
-    T, _ = spine(hip, g("torso"), g("flex"), flex0=g("flex0"))
+    T, _ = spine(hip, g("torso"), g("flex"), flex0=g("flex0"), flex1=g("flex1", 1))
     top = T(1, 0)
-    P = dict(hip=hip, top=top, tb=g("torso"), flex=g("flex"), flex0=g("flex0"), joint=T(0.94, -2), head=T(1.3, -3.5), belly=T(0.35, 7.5),
+    P = dict(hip=hip, top=top, tb=g("torso"), flex=g("flex"), flex0=g("flex0"), flex1=g("flex1", 1), joint=T(0.94, -2), head=T(1.3, -3.5), belly=T(0.35, 7.5),
              low_back=T(0.3, -11), chest=T(0.8, 8))
     P["near"] = leg(hip, g("thigh"), g("shank"), g("foot"))
     P["far"] = leg(hip, g("thigh2", g("thigh")), g("shank2", g("shank")), g("foot2", g("foot")))
@@ -170,7 +171,7 @@ def moved(P, dx, dy):
         if isinstance(v, list):
             return [mv(x) for x in v]
         return v
-    return {k: (mv(v) if k not in ("tb", "flex", "flex0") else v) for k, v in P.items()}
+    return {k: (mv(v) if k not in ("tb", "flex", "flex0", "flex1") else v) for k, v in P.items()}
 
 
 def on_floor(P, floor=0.0):

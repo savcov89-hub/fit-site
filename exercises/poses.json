@@ -34,10 +34,10 @@
   },
   "glute_bridge": {
     "anchor": "heel",
-    "floor": "feet",
     "cues": ["Упор на лопатки и стопы, голова лежит", "Наверху тело прямое от плеч до колен"],
-    "start": {"torso": -90, "thigh": 50, "shank": 160, "foot": 0, "upper": 101, "fore": 93, "flex": 0, "flex0": 0.85},
-    "end": {"torso": -113, "flex": 23, "flex0": 0.85, "thigh": 67, "shank": 160, "foot": 0, "upper": 101, "fore": 93}
+    "start": {"thigh": 50, "shank": 160, "foot": 0, "lift": 0},
+    "end": {"thigh": 67, "shank": 160, "foot": 0, "lift": 20},
+    "bridge": true
   },
   "bird_dog": {
     "anchor": "knee2",
@@ -66,7 +66,7 @@
     "anchor": "toe",
     "plant": "hand",
     "cues": ["Тело прямое, как в планке", "Локти уходят назад под 45°"],
-    "start": {"torso": 79, "thigh": -101, "shank": -101, "foot": 67, "upper": 180, "fore": 180},
+    "start": {"torso": 78, "thigh": -102, "shank": -102, "foot": 67, "upper": 180, "fore": 180},
     "end": {"torso": 90, "thigh": -90, "shank": -90, "foot": 78, "upper": 180, "fore": 180},
     "plant_back": 28
   },
@@ -103,9 +103,11 @@
   "deadlift": {
     "anchor": "heel",
     "bar": "hands",
-    "cues": ["Гриф у голеней, спина ровная", "Встаёшь ногами и тазом одновременно"],
-    "start": {"torso": 58, "thigh": 112, "shank": 205, "foot": 0, "upper": 180, "fore": 180},
-    "end": {"torso": 2, "thigh": 178, "shank": 182, "foot": 0, "upper": 180, "fore": 180}
+    "cues": ["Гриф над серединой стопы, касается голеней", "Таз и плечи поднимаются вместе, гриф идёт по прямой"],
+    "start": {"torso": 70, "thigh": 104, "shank": 190, "foot": 0, "upper": 180, "fore": 180},
+    "end": {"torso": 2, "thigh": 178, "shank": 182, "foot": 0, "upper": 180, "fore": 180},
+    "bar_line": 7,
+    "load": 1.5
   },
   "goblet_squat": {
     "anchor": "heel",
@@ -117,16 +119,24 @@
   "good_morning": {
     "anchor": "heel",
     "bar": "back",
-    "cues": ["Колени чуть согнуты, таз уходит назад", "Наклон до параллели, спина ровная"],
-    "start": {"torso": 3, "thigh": 178, "shank": 182, "foot": 0, "upper": 200, "fore": 20},
-    "end": {"torso": 78, "thigh": 158, "shank": 186, "foot": 0, "upper": -82, "fore": 98}
+    "cues": ["Колени чуть согнуты, таз уходит назад", "Вес над серединой стопы, спина ровная"],
+    "start": {"torso": 3, "thigh": 178, "shank": 183, "foot": 0},
+    "end": {"torso": 80, "thigh": 160, "shank": 186, "foot": 0},
+    "balance": "thigh",
+    "load": 0.4,
+    "hold": true,
+    "bend": 1
   },
   "ohp": {
     "anchor": "heel",
     "bar": "hands",
-    "cues": ["Гриф от груди строго вверх", "Ягодицы и живот напряжены, корпус не отклоняй"],
-    "start": {"torso": 0, "thigh": 180, "shank": 180, "foot": 0, "upper": 160, "fore": 8},
-    "end": {"torso": 0, "thigh": 180, "shank": 180, "foot": 0, "upper": 4, "fore": 2}
+    "cues": ["Гриф идёт по прямой над серединой стопы", "Корпус чуть отклоняется назад, голова уходит с пути грифа"],
+    "start": {"torso": -14, "thigh": 180, "shank": 180, "foot": 0, "bar_y": 6, "upper_len": 22},
+    "end": {"torso": -3, "thigh": 180, "shank": 180, "foot": 0, "bar_y": 60, "upper_len": 29},
+    "bar_line": 8,
+    "balance": "thigh",
+    "load": 0.5,
+    "bend": "front"
   },
   "front_raise": {
     "anchor": "heel",
@@ -151,9 +161,9 @@
   },
   "reverse_crunch": {
     "anchor": "joint",
-    "cues": ["Подкручивай таз к рёбрам", "Опускай ноги медленно, поясница на полу"],
-    "start": {"torso": -90, "upper": 101, "fore": 93, "thigh": 0, "shank": 90, "foot": -88, "flex": 0},
-    "end": {"torso": -100, "upper": 101, "fore": 93, "flex": -12, "thigh": -45, "shank": 45, "foot": -60}
+    "cues": ["Подкручивай таз: поясница отрывается от пола", "Лопатки и голова лежат, опускайся медленно"],
+    "start": {"torso": -90, "flex": 0, "flex0": 0, "flex1": 0.55, "thigh": 0, "shank": 90, "foot": -88, "upper": 101, "fore": 93},
+    "end": {"torso": -125, "flex": 35, "flex0": 0, "flex1": 0.55, "thigh": -40, "shank": 50, "foot": -60, "upper": 101, "fore": 93}
   },
   "leg_raise": {
     "anchor": "hip",
@@ -163,10 +173,9 @@
   },
   "superman": {
     "anchor": "hip",
-    "cues": ["Лёжа на животе, тянись руками вперёд", "Поднимай грудь и ноги невысоко, шея ровная"],
-    "start": {"torso": 90, "flex": 0, "thigh": -90, "shank": -90, "foot": 175, "upper": 88, "fore": 90},
-    "end": {"torso": 90, "flex": -18, "thigh": -98, "shank": -100, "foot": 168, "upper": 74, "fore": 76},
-    "floor": "pelvis"
+    "cues": ["Сожми ягодицы, прогнись в пояснице", "Грудь и ноги поднимаются невысоко, таз на полу"],
+    "start": {"torso": 90, "flex": 0, "thigh": -90, "shank": -90, "foot": 180, "upper": 88, "fore": 90},
+    "end": {"torso": 90, "flex": -28, "thigh": -82, "shank": -82, "foot": 190, "upper": 72, "fore": 74}
   },
   "cat_cow": {
     "anchor": "knee2",
@@ -179,25 +188,26 @@
     "anchor": "knee2",
     "cues": ["Толкай пятку вверх, колено согнуто", "Поясница не прогибается"],
     "start": {"torso": 90, "thigh": 180, "shank": -90, "foot": 180, "upper": 180, "fore": 180},
-    "end": {"torso": 90, "thigh": -105, "shank": -15, "foot": -90, "upper": 180, "fore": 180}
+    "end": {"torso": 90, "thigh": -105, "shank": -15, "foot": -90, "upper": 180, "fore": 180, "thigh2": 180, "shank2": -90, "foot2": 180, "upper2": 180, "fore2": 180}
   },
   "bridge_single": {
     "anchor": "heel",
-    "floor": "feet",
-    "cues": ["Одна нога вытянута, упор на лопатки и стопу", "Таз не перекашивай"],
-    "start": {"torso": -90, "flex": 0, "flex0": 0.85, "thigh": 50, "shank": 160, "foot": 0, "thigh2": 45, "shank2": 45, "foot2": -60, "upper": 101, "fore": 93},
-    "end": {"torso": -113, "flex": 23, "flex0": 0.85, "thigh": 67, "shank": 160, "foot": 0, "thigh2": 67, "shank2": 67, "foot2": -30, "upper": 101, "fore": 93}
+    "cues": ["Лопатки и стопа всё время на полу", "Вторая нога вытянута, таз не перекашивай"],
+    "start": {"thigh": 50, "shank": 160, "foot": 0, "thigh2": 45, "shank2": 45, "foot2": -60, "lift": 0},
+    "end": {"thigh": 67, "shank": 160, "foot": 0, "thigh2": 54.5, "shank2": 54.5, "foot2": -30, "lift": 20},
+    "bridge": true,
+    "single": true
   },
   "high_plank": {
     "anchor": "toe",
-    "plant": "hand",
     "cues": ["Кисти под плечами, руки прямые", "Тело прямое от головы до пяток"],
-    "end": {"torso": 77.5, "thigh": -102.5, "shank": -102.5, "foot": 67}
+    "end": {"torso": 76.5, "thigh": -103.5, "shank": -103.5, "foot": 66.5, "upper": 180, "fore": 180}
   },
   "forward_fold": {
     "anchor": "heel",
-    "cues": ["Колени мягкие, тянись руками к стопам", "Опускайся медленно, не пружинь"],
+    "cues": ["Колени мягкие, таз уходит назад", "Тянись руками к стопам, не пружинь"],
     "start": {"torso": 2, "flex": 0, "thigh": 178, "shank": 182, "foot": 0, "upper": 180, "fore": 180},
-    "end": {"torso": 62, "flex": 45, "thigh": 160, "shank": 184, "foot": 0, "upper": 180, "fore": 180}
+    "end": {"torso": 66, "flex": 45, "thigh": 160, "shank": 184, "foot": 0, "upper": 180, "fore": 180},
+    "balance": "thigh"
   }
 }

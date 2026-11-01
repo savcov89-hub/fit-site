@@ -79,7 +79,7 @@ def lerp_spec(a, b, t):
     out = dict(b)
     for k, v in b.items():
         if isinstance(v, (int, float)) and isinstance(a.get(k), (int, float)):
-            d = v - a[k] if k in ("flex", "flex0", "rear", "upper_len", "fore_len") else (v - a[k] + 180) % 360 - 180
+            d = v - a[k] if k in ("flex", "flex0", "flex1", "rear", "upper_len", "fore_len", "lift", "bar_y") else (v - a[k] + 180) % 360 - 180
             out[k] = a[k] + d * t
         elif isinstance(v, (list, tuple)) and isinstance(a.get(k), (list, tuple)):     # цель кисти [x, y] от таза
             out[k] = tuple(x + (y - x) * t for x, y in zip(a[k], v))
@@ -123,16 +123,144 @@ def pose(spec):
     return P
 
 
+def set_arms(P, target, bend=1, l1=M.L["upper"]):
+    """Обе кисти в точку target (штанга, пол), локти сгибаются сами (ik).
+    l1 — видимая длина плеча: когда локти разведены в стороны, сбоку плечо кажется короче (жим стоя)."""
+    if bend == "front":     # локоть впереди: из двух решений ik берём то, где локоть дальше вперёд
+        bend = max((1, -1), key=lambda b: M.add(P["joint"], M.ik(P["joint"], target, l1=l1, bend=b)[0], l1)[0])
+    for side in ("arm", "arm2"):
+        up, fo = M.ik(P["joint"], target, l1=l1, bend=bend)
+        e = M.add(P["joint"], up, l1)
+        P[side] = dict(elbow=e, hand=M.add(e, fo, M.L["fore"]))
+    P["elbow"], P["hand"], P["hand2"] = P["arm"]["elbow"], P["arm"]["hand"], P["arm2"]["hand"]
+
+
+GRIP = 6.0                                   # гриф лежит в кулаке, на 6 см дальше запястья
+REACH = M.L["upper"] + M.L["fore"] - 0.4 + GRIP
+
+
+def bar_arms(P, ex, spec):
+    """bar_line: штанга идёт строго по вертикали на bar_line см впереди голеностопа (над серединой стопы).
+    bar_y — высота грифа над плечевым суставом (жим стоя); без него руки висят прямо (становая)."""
+    if "bar_line" not in ex:
+        return
+    x = P["near"]["ankle"][0] + ex["bar_line"]
+    j = P["joint"]
+    if "bar_y" in spec:     # жим: гриф лежит на ладони, чуть выше запястья
+        y = j[1] + spec["bar_y"]
+        set_arms(P, (x, y - 4), ex.get("bend", 1), spec.get("upper_len", M.L["upper"]))
+    else:                   # руки висят прямо, гриф в кулаке
+        y = j[1] - math.sqrt(max(0.0, REACH ** 2 - (x - j[0]) ** 2))
+        d = math.hypot(x - j[0], y - j[1]) or 1
+        k = max(0.0, d - GRIP) / d
+        set_arms(P, (j[0] + (x - j[0]) * k, j[1] + (y - j[1]) * k), ex.get("bend", 1))
+    P["grip"] = (x, y)
+
+
+def mid(a, b):
+    return ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+
+
+def com_x(P, ex):
+    """Центр масс по горизонтали: доли сегментов по Демпстеру, плюс вес снаряда (load — доля веса тела)."""
+    T = M.torso(P)[0]
+    parts = [(P["head"], .081), (T(0.5, -2), .497)]
+    for a in (P["arm"], P["arm2"]):
+        parts += [(mid(P["joint"], a["elbow"]), .028), (mid(a["elbow"], a["hand"]), .022)]
+    for lg in (P["near"], P["far"]):
+        parts += [(mid(P["hip"], lg["knee"]), .1), (mid(lg["knee"], lg["ankle"]), .0465),
+                  ((lg["ankle"][0] + 6, 0), .0145)]
+    load = ex.get("load", 0)
+    if load and ex.get("bar") in ("back", "hands"):
+        parts.append((bar_point(P, ex["bar"]), load))
+    elif load and ex.get("bar") == "dumbbell":
+        parts.append((mid(P["hand"], P["hand2"]), load))
+    return sum(p[0] * m for p, m in parts) / sum(m for _, m in parts)
+
+
+def balance(spec, ex):
+    """Таз уходит назад или вперёд, пока центр масс (с весом штанги) не встанет над серединой стопы:
+    так человек не падает вперёд в наклонах и отклоняется назад в жиме стоя. Подбирается угол бедра."""
+    key = ex["balance"] if ex["balance"] in ("thigh", "torso") else "thigh"   # что подбирать: бедро или наклон корпуса
+    best = None
+    for i in range(-120, 121):
+        s = dict(spec, **{key: spec[key] + i * 0.5})
+        s["thigh2"] = s["thigh"]
+        P = pose(s)
+        bar_arms(P, ex, s)
+        err = abs(com_x(P, ex) - (P["near"]["ankle"][0] + 6))
+        if best is None or err < best[0]:
+            best = (err, s)
+    return best[1]
+
+
+def bridge(spec, ex, ref):
+    """Мостик: лопатки и стопы всё время на полу, таз поднимается на lift см. Корпус поворачивается так,
+    чтобы верх спины лежал на полу, ноги дотягиваются до стоп через ik, голова лежит (шея сгибается)."""
+    H = ref["hip_y"] + spec.get("lift", 0)
+    best = None
+    for i in range(0, 141):
+        a = -90 - i * 0.5
+        s = dict(spec, torso=a, flex=-90 - a, flex0=0.85)
+        T = M.spine((0, 0), a, s["flex"], flex0=0.85)[0]
+        bottom = min(T(t / 20, -11.5)[1] for t in range(12, 21))
+        err = abs(H + bottom)
+        if best is None or err < best[0]:
+            best = (err, s)
+    s = best[1]
+    P = M.build(s)
+    # плечо стоит на месте: таз смещается, стопа (голеностоп) тоже стоит на месте
+    hip_w = (ref["joint_x"] - P["joint"][0], H)
+    ankle = (ref["ankle"][0] - hip_w[0], ref["ankle"][1] - hip_w[1])
+    th, sh = M.ik((0, 0), ankle, M.L["thigh"], M.L["shank"], bend=-1)
+    P["near"] = M.leg((0, 0), th, sh, spec.get("foot", 0))
+    if not ex.get("single"):
+        P["far"] = P["near"]
+    for k in ("knee", "ankle", "heel", "toe"):
+        P[k] = P["near"][k]
+    P["knee2"], P["heel2"], P["toe2"] = P["far"]["knee"], P["far"]["heel"], P["far"]["toe"]
+    # руки лежат на полу вдоль тела, кисти не двигаются
+    set_arms(P, (ref["joint_x"] + 53 - hip_w[0], 2.2 - hip_w[1]), bend=-1)
+    return P
+
+
+def bridge_ref(ex):
+    """Лёжа (lift 0): высота таза над полом, плечо и голеностоп — их держим на месте.
+    Пол — по спине и стопам: руки сюда не входят, иначе тело зависает над полом."""
+    P = pose(full(dict(ex["start"], torso=-90, flex=0)))
+    T = M.torso(P)[0]
+    floor = min(min(T(t / 10, -11.5)[1] for t in range(11)), lowest(P, "feet"))
+    P = M.moved(P, 0, -floor)
+    return dict(hip_y=P["hip"][1], joint_x=P["joint"][0] - P["hip"][0],
+                ankle=(P["near"]["ankle"][0] - P["hip"][0], P["near"]["ankle"][1]))
+
+
+def solve(spec, ex, ref=None):
+    if ex.get("bridge"):
+        return bridge(spec, ex, ref)
+    if ex.get("balance"):
+        spec = balance(spec, ex)
+    P = pose(spec)
+    bar_arms(P, ex, spec)
+    if ex.get("hold"):      # штанга на спине: руки держат гриф как в приседе (локти вниз-назад от корпуса)
+        for side in ("arm", "arm2"):
+            e = M.add(P["joint"], P["tb"] + 200, M.L["upper"])
+            P[side] = dict(elbow=e, hand=M.add(e, P["tb"] + 20, M.L["fore"]))
+        P["elbow"], P["hand"], P["hand2"] = P["arm"]["elbow"], P["arm"]["hand"], P["arm2"]["hand"]
+    return P
+
+
 def frames(ex):
     """Список поз P от start к end (если start нет — одна поза)."""
+    ref = bridge_ref(ex) if ex.get("bridge") else None
     end = full(ex["end"])
     if not ex.get("start"):
-        return [pose(end)]
+        return [solve(end, ex, ref)]
     start = full(ex["start"])
     out = []
     for i in range(FRAMES):
         t = (1 - math.cos(math.pi * i / (FRAMES - 1))) / 2      # плавный разгон и торможение
-        out.append(pose(lerp_spec(start, end, t)))
+        out.append(solve(lerp_spec(start, end, t), ex, ref))
     return out
 
 
@@ -164,11 +292,7 @@ def place(Ps, ex):
     if plant == "hand":
         hand = (Ps[-1]["joint"][0] - ex.get("plant_back", 0), 2.2)
         for P in Ps:
-            for side in ("arm", "arm2"):
-                up, fo = M.ik(P["joint"], hand, bend=1)
-                e = M.add(P["joint"], up, M.L["upper"])
-                P[side] = dict(elbow=e, hand=M.add(e, fo, M.L["fore"]))
-            P["elbow"], P["hand"], P["hand2"] = P["arm"]["elbow"], P["arm"]["hand"], P["arm2"]["hand"]
+            set_arms(P, hand)
     return Ps
 
 
@@ -177,7 +301,7 @@ def place(Ps, ex):
 def bar_point(P, bar):
     if bar == "back":
         return M.torso(P)[0](0.97, -9)
-    return P["hand"]
+    return P.get("grip", P["hand"])
 
 
 def equipment(pen, P, ex):

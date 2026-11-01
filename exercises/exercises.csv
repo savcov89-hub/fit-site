@@ -3,7 +3,7 @@ squat_bw,Приседания без веса,ноги,quads glutes,approved,
 squat_back,Приседания со штангой на спине,ноги,quads glutes back,approved,
 split_squat,Выпад на месте,ноги,quads glutes,draft,Исправлено: больше наклон корпуса
 rdl,Румынская тяга со штангой,ноги,hams glutes back,approved,
-row_bent,Тяга штанги в наклоне,спина,lats traps biceps,draft,
+row_bent,Тяга штанги в наклоне,спина,lats traps biceps,approved,
 glute_bridge,Ягодичный мостик,ноги,glutes hams,draft,"Исправлено: стопы на полу, упор на лопатки, голова лежит"
 bird_dog,«Птица-собака»,кор,glutes back abs,approved,
 dead_bug,«Мёртвый жук»,кор,abs tva,approved,
@@ -14,18 +14,18 @@ curl_db,Сгибание рук с гантелями,руки,biceps,approved,
 press_db,Жим гантелей стоя,плечи,delts triceps,approved,
 calf_raise,Подъём на носки,ноги,calves,draft,"Исправлено: стоит носками на ступеньке, пятки свисают"
 bench_press,Жим штанги лёжа,грудь,chest triceps delts,draft,Исправлено: гриф опускается до касания груди
-deadlift,Становая тяга,ноги,glutes hams back quads,draft,
-goblet_squat,Гоблет-присед с гантелью,ноги,quads glutes,draft,
-good_morning,«Доброе утро» со штангой,ноги,hams glutes back,draft,
-ohp,Жим штанги стоя,плечи,delts triceps,draft,
-front_raise,Подъём гантелей перед собой,плечи,delts,draft,
-triceps_ext,Разгибание руки с гантелью из-за головы,руки,triceps,draft,
-row_db,Тяга гантелей в наклоне,спина,lats traps biceps,draft,
-reverse_crunch,Обратные скручивания,кор,abs hipflex,draft,
-leg_raise,Подъём прямых ног лёжа,кор,abs hipflex,draft,
-superman,«Супермен»,спина,back glutes,draft,
-cat_cow,«Кошка-корова»,спина,back abs,draft,
-kickback,Отведение ноги назад на четвереньках,ноги,glutes hams,draft,
-bridge_single,Ягодичный мостик на одной ноге,ноги,glutes hams,draft,
-high_plank,Планка на прямых руках,кор,abs tva delts,draft,
-forward_fold,Наклон к ногам стоя,растяжка,hams back,draft,
+deadlift,Становая тяга,ноги,glutes hams back quads,draft,"Исправлено: гриф идёт вдоль голеней и бёдер, колени не пересекает"
+goblet_squat,Гоблет-присед с гантелью,ноги,quads glutes,approved,
+good_morning,«Доброе утро» со штангой,ноги,hams glutes back,draft,"Исправлено: таз отводится назад, центр тяжести над стопами"
+ohp,Жим штанги стоя,плечи,delts triceps,draft,"Исправлено: гриф идёт ближе к лицу, корпус чуть отклоняется назад"
+front_raise,Подъём гантелей перед собой,плечи,delts,approved,
+triceps_ext,Разгибание руки с гантелью из-за головы,руки,triceps,approved,
+row_db,Тяга гантелей в наклоне,спина,lats traps biceps,approved,
+reverse_crunch,Обратные скручивания,кор,abs hipflex,draft,"Исправлено: таз и поясница поднимаются от пола, лопатки лежат"
+leg_raise,Подъём прямых ног лёжа,кор,abs hipflex,approved,
+superman,«Супермен»,спина,back glutes,draft,"Исправлено: прогиб в пояснице, грудь и ноги поднимаются от пола"
+cat_cow,«Кошка-корова»,спина,back abs,approved,
+kickback,Отведение ноги назад на четвереньках,ноги,glutes hams,draft,"Исправлено: опорное колено на полу, корпус не качается, видна вторая нога"
+bridge_single,Ягодичный мостик на одной ноге,ноги,glutes hams,draft,"Исправлено: лопатки и голова на полу, опорная стопа не отрывается"
+high_plank,Планка на прямых руках,кор,abs tva delts,draft,Исправлено: руки прямые
+forward_fold,Наклон к ногам стоя,растяжка,hams back,draft,"Исправлено: таз уходит назад, центр тяжести над стопами"
