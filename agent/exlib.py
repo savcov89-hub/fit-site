@@ -79,7 +79,7 @@ def lerp_spec(a, b, t):
     out = dict(b)
     for k, v in b.items():
         if isinstance(v, (int, float)) and isinstance(a.get(k), (int, float)):
-            d = v - a[k] if k == "flex" else (v - a[k] + 180) % 360 - 180
+            d = v - a[k] if k in ("flex", "flex0", "rear", "upper_len", "fore_len") else (v - a[k] + 180) % 360 - 180
             out[k] = a[k] + d * t
         elif isinstance(v, (list, tuple)) and isinstance(a.get(k), (list, tuple)):     # цель кисти [x, y] от таза
             out[k] = tuple(x + (y - x) * t for x, y in zip(a[k], v))
@@ -114,6 +114,7 @@ def pose(spec):
         th, sh = M.ik(P["hip"], ankle, M.L["thigh"], M.L["shank"], bend=-1)
         P["far"] = M.leg(P["hip"], th, sh, f)
         P["knee2"], P["heel2"] = P["far"]["knee"], P["far"]["heel"]
+    P["toe2"] = P["far"]["toe"]
     if "upper_len" in spec or "fore_len" in spec:
         for side, sfx in (("arm", ""), ("arm2", "2")):
             e = M.add(P["joint"], spec["upper" + sfx], spec.get("upper_len", M.L["upper"]))
@@ -135,29 +136,40 @@ def frames(ex):
     return out
 
 
-def place(Ps, anchor, plant=None):
+def lowest(P, part):
+    if part == "feet":
+        return min(p[1] for lg in (P["near"], P["far"]) for p in lg["foot"])
+    if part == "toe":
+        return P["toe"][1]
+    if part == "far":       # опорная нога — дальняя (скалолаз: ближняя нога в воздухе)
+        return min(p[1] for p in P["far"]["foot"])
+    if part == "pelvis":    # на полу таз и живот («супермен»: грудь и ноги поднимаются)
+        T = M.torso(P)[0]
+        return min(T(t / 10, s)[1] for t in range(0, 5) for s in (-11.5, 7.5))
+    return M.bbox(P)[1]
+
+
+def place(Ps, ex):
     """Каждую позу ставим на пол, опорную точку (стопа, колено, таз) держим на месте по горизонтали.
-    plant: hand — кисть стоит там же, где в первой позе (отжимания): рука сгибается сама, через ik."""
-    out = []
-    ref = hand = None
-    for P in Ps:
-        if plant == "hand":     # на полу стопы и кисти: пол считаем по стопам, кисть ставим на пол потом
-            P = M.moved(P, 0, -min(p[1] for lg in (P["near"], P["far"]) for p in lg["foot"]))
-        else:
-            P = M.on_floor(P)
-        if ref is None:
-            ref = P[anchor][0]
-        P = M.moved(P, ref - P[anchor][0], 0)
-        if plant == "hand":
-            if hand is None:
-                hand = (P["joint"][0], 2.2)
+    floor: feet — пол по стопам (мостик, отжимания: остальное тело само ложится на пол), toe — носок стоит
+    на ступеньке высотой step см (подъём на носки, пятка свисает).
+    plant: hand — кисть стоит на полу в одной точке во всех позах (отжимания), рука сгибается сама через ik;
+    точка — под плечом в последней позе, сдвинутая назад на plant_back см."""
+    anchor, plant = ex.get("anchor", "hip"), ex.get("plant")
+    part = ex.get("floor", "feet" if plant == "hand" else "all")
+    lift = ex.get("step", 0)
+    Ps = [M.moved(P, 0, lift - lowest(P, part)) for P in Ps]
+    ref = Ps[0][anchor][0]
+    Ps = [M.moved(P, ref - P[anchor][0], 0) for P in Ps]
+    if plant == "hand":
+        hand = (Ps[-1]["joint"][0] - ex.get("plant_back", 0), 2.2)
+        for P in Ps:
             for side in ("arm", "arm2"):
                 up, fo = M.ik(P["joint"], hand, bend=1)
                 e = M.add(P["joint"], up, M.L["upper"])
                 P[side] = dict(elbow=e, hand=M.add(e, fo, M.L["fore"]))
             P["elbow"], P["hand"], P["hand2"] = P["arm"]["elbow"], P["arm"]["hand"], P["arm2"]["hand"]
-        out.append(P)
-    return out
+    return Ps
 
 
 # ---------- снаряды ----------
@@ -183,6 +195,13 @@ def equipment(pen, P, ex):
                        f'<circle class="barc" cx="{x:.1f}" cy="{y:.1f}" r="4.5"/>')
         return '<g class="far">' + out[0] + "</g>" + out[1]
     return ""
+
+
+def step_svg(pen, P, h):
+    """Ступенька под передней частью стопы: пятка свисает за край (подъём на носки)."""
+    x = P["toe"][0]
+    a, c = pen.p((x - 18, h)), pen.p((x + 22, 0))
+    return f'<rect class="equip" x="{a[0]:.1f}" y="{a[1]:.1f}" width="{c[0] - a[0]:.1f}" height="{c[1] - a[1] + 3:.1f}" rx="3"/>'
 
 
 def bench_svg(pen, ex, P):
@@ -287,7 +306,7 @@ STYLE_EXTRA = """<style>
 
 
 def render(row, ex):
-    Ps = place(frames(ex), ex.get("anchor", "hip"), ex.get("plant"))
+    Ps = place(frames(ex), ex)
     if ex.get("bench"):
         # скамья под спиной: верх — по нижнему краю корпуса в первой позе, от таза до плеч с запасом
         T = M.torso(Ps[0])[0]
@@ -300,6 +319,9 @@ def render(row, ex):
         for P in Ps:
             c = bar_point(P, ex["bar"])
             pts += [(c[0] - 17.5, c[1] - 17.5), (c[0] + 17.5, c[1] + 17.5)]
+    if ex.get("step"):
+        x = Ps[0]["toe"][0]
+        pts += [(x - 18, 0), (x + 22, ex["step"])]
     if ex.get("bench"):
         pts += [(ex["bench"]["x"][0], 0), (ex["bench"]["x"][1], ex["bench"]["h"])]
     x0, x1 = min(p[0] for p in pts), max(p[0] for p in pts)
@@ -318,6 +340,8 @@ def render(row, ex):
     pen = M.Pen(M.W / 2 - (x0 + x1) / 2 * M.S, floor_y)
     out.append(f'<line class="floor" x1="32" y1="{floor_y + 3:.0f}" x2="{M.W - 32}" y2="{floor_y + 3:.0f}"/>')
     out.append(bench_svg(pen, ex, Ps[0]))
+    if ex.get("step"):
+        out.append(step_svg(pen, Ps[0], ex["step"]))
     figs = [M.draw_body(pen, P, on=on) + equipment(pen, P, ex) for P in Ps]
     idx, kt = timeline(len(figs))
     if kt:

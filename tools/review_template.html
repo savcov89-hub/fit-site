@@ -90,7 +90,7 @@ function card(e) {
     <div class="acts"><button type="button" class="yes">Верно</button><button type="button" class="no">Нужна правка</button></div>
     <textarea id="c-${e.id}" placeholder="Что поправить: например, «колено уходит за носок», «добавь широчайшие»"></textarea>
     <div class="saved" aria-live="polite"></div>`;
-  el.querySelector("img").src = "ex/" + e.id + ".svg";
+  el.querySelector("img").src = "ex/" + e.id + ".svg?v=" + e.v;
   el.querySelector("img").alt = "Схема: " + e.name;
   el.querySelector(".name").textContent = e.name;
   el.querySelector(".meta").textContent = `${e.section} · ${e.muscles}`;

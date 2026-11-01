@@ -55,14 +55,15 @@ def frame(p0, p1):
     return lambda t, s: (p0[0] + u[0] * t * ln + a[0] * s, p0[1] + u[1] * t * ln + a[1] * s)
 
 
-def spine(hip, angle, flex, ln=L["torso"]):
+def spine(hip, angle, flex, ln=L["torso"], flex0=0.0):
     """Корпус дугой: направление поворачивается на flex градусов от таза к плечам.
     flex > 0 — сгибание вперёд (скручивание, позвоночник круглый), < 0 — прогиб назад.
     Возвращает T(t, s) как у frame и угол направления в точке t (для поворота позвонков)."""
     n = 40
 
     def ang(t):
-        return angle + flex * min(t, 1.0)
+        # flex0 — с какой доли длины начинается изгиб: 0.4 — поясница прямая, сгибается только грудной отдел
+        return angle + flex * max(0.0, min(t, 1.0) - flex0) / (1 - flex0)
 
     def T(t, s):
         x, y = hip
@@ -81,7 +82,7 @@ def spine(hip, angle, flex, ln=L["torso"]):
 
 
 def torso(P):
-    return spine(P["hip"], P["tb"], P.get("flex", 0))
+    return spine(P["hip"], P["tb"], P.get("flex", 0), flex0=P.get("flex0", 0))
 
 
 def rot(v, a):
@@ -119,9 +120,9 @@ def build(spec):
     (+ thigh2… для дальних рук и ног), opt. hand/hand2 — цель кисти."""
     g = lambda k, d=0: spec.get(k, d)  # noqa: E731
     hip = (0.0, 0.0)
-    T, _ = spine(hip, g("torso"), g("flex"))
+    T, _ = spine(hip, g("torso"), g("flex"), flex0=g("flex0"))
     top = T(1, 0)
-    P = dict(hip=hip, top=top, tb=g("torso"), flex=g("flex"), joint=T(0.94, -2), head=T(1.3, -3.5), belly=T(0.35, 7.5),
+    P = dict(hip=hip, top=top, tb=g("torso"), flex=g("flex"), flex0=g("flex0"), joint=T(0.94, -2), head=T(1.3, -3.5), belly=T(0.35, 7.5),
              low_back=T(0.3, -11), chest=T(0.8, 8))
     P["near"] = leg(hip, g("thigh"), g("shank"), g("foot"))
     P["far"] = leg(hip, g("thigh2", g("thigh")), g("shank2", g("shank")), g("foot2", g("foot")))
@@ -169,7 +170,7 @@ def moved(P, dx, dy):
         if isinstance(v, list):
             return [mv(x) for x in v]
         return v
-    return {k: (mv(v) if k not in ("tb", "flex") else v) for k, v in P.items()}
+    return {k: (mv(v) if k not in ("tb", "flex", "flex0") else v) for k, v in P.items()}
 
 
 def on_floor(P, floor=0.0):

@@ -1,16 +1,31 @@
 id,name,section,muscles,status,comment
-squat_bw,Приседания без веса,ноги,quads glutes,draft,
-squat_back,Приседания со штангой на спине,ноги,quads glutes back,draft,
-split_squat,Выпад на месте,ноги,quads glutes,draft,
-rdl,Румынская тяга со штангой,ноги,hams glutes back,draft,
+squat_bw,Приседания без веса,ноги,quads glutes,approved,
+squat_back,Приседания со штангой на спине,ноги,quads glutes back,approved,
+split_squat,Выпад на месте,ноги,quads glutes,draft,Исправлено: больше наклон корпуса
+rdl,Румынская тяга со штангой,ноги,hams glutes back,approved,
 row_bent,Тяга штанги в наклоне,спина,lats traps biceps,draft,
-glute_bridge,Ягодичный мостик,ноги,glutes hams,draft,
-bird_dog,«Птица-собака»,кор,glutes back abs,draft,
-dead_bug,«Мёртвый жук»,кор,abs tva,draft,
-crunch,Скручивания лёжа,кор,abs,draft,
-plank,Планка на предплечьях,кор,abs tva delts,draft,
-pushup,Отжимания от пола,грудь,chest triceps delts,draft,
-curl_db,Сгибание рук с гантелями,руки,biceps,draft,
-press_db,Жим гантелей стоя,плечи,delts triceps,draft,
-calf_raise,Подъём на носки,ноги,calves,draft,
-bench_press,Жим штанги лёжа,грудь,chest triceps delts,draft,
+glute_bridge,Ягодичный мостик,ноги,glutes hams,draft,"Исправлено: стопы на полу, упор на лопатки, голова лежит"
+bird_dog,«Птица-собака»,кор,glutes back abs,approved,
+dead_bug,«Мёртвый жук»,кор,abs tva,approved,
+crunch,Скручивания лёжа,кор,abs,draft,"Исправлено: поясница лежит, сгибается только грудной отдел"
+plank,Планка на предплечьях,кор,abs tva delts,draft,Исправлено: предплечья лежат на полу
+pushup,Отжимания от пола,грудь,chest triceps delts,draft,"Исправлено: кисти не отрываются, опускается глубже, предплечье почти вертикально"
+curl_db,Сгибание рук с гантелями,руки,biceps,approved,
+press_db,Жим гантелей стоя,плечи,delts triceps,approved,
+calf_raise,Подъём на носки,ноги,calves,draft,"Исправлено: стоит носками на ступеньке, пятки свисают"
+bench_press,Жим штанги лёжа,грудь,chest triceps delts,draft,Исправлено: гриф опускается до касания груди
+deadlift,Становая тяга,ноги,glutes hams back quads,draft,
+goblet_squat,Гоблет-присед с гантелью,ноги,quads glutes,draft,
+good_morning,«Доброе утро» со штангой,ноги,hams glutes back,draft,
+ohp,Жим штанги стоя,плечи,delts triceps,draft,
+front_raise,Подъём гантелей перед собой,плечи,delts,draft,
+triceps_ext,Разгибание руки с гантелью из-за головы,руки,triceps,draft,
+row_db,Тяга гантелей в наклоне,спина,lats traps biceps,draft,
+reverse_crunch,Обратные скручивания,кор,abs hipflex,draft,
+leg_raise,Подъём прямых ног лёжа,кор,abs hipflex,draft,
+superman,«Супермен»,спина,back glutes,draft,
+cat_cow,«Кошка-корова»,спина,back abs,draft,
+kickback,Отведение ноги назад на четвереньках,ноги,glutes hams,draft,
+bridge_single,Ягодичный мостик на одной ноге,ноги,glutes hams,draft,
+high_plank,Планка на прямых руках,кор,abs tva delts,draft,
+forward_fold,Наклон к ногам стоя,растяжка,hams back,draft,

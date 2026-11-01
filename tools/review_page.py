@@ -11,7 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "agent"))
 import exlib  # noqa: E402
 import moves as M  # noqa: E402
 
-rows = [dict(id=r["id"], name=r["name"], section=r["section"], status=r["status"], comment=r["comment"],
+import hashlib  # noqa: E402
+
+rows = [dict(id=r["id"], v=hashlib.md5((exlib.OUT / f"{r['id']}.svg").read_bytes()).hexdigest()[:8], name=r["name"], section=r["section"], status=r["status"], comment=r["comment"],
              muscles=", ".join(M.RU.get(m, m) for m in r["muscles"].split())) for r in exlib.manifest()]
 html = (Path(__file__).with_name("review_template.html").read_text(encoding="utf-8")
         .replace("/*DATA*/[]", json.dumps(rows, ensure_ascii=False)))
