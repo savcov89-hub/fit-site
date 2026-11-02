@@ -11,7 +11,8 @@ import svgkit as K
 
 KINDS = ["pose", "bars", "range", "compare", "checklist", "steps"]
 MUSCLES = ["quads", "glutes", "hams", "calves", "back", "abs", "traps"]
-TARGETS = ["bar", "head", "shoulder", "chest", "back", "belly", "hip", "knee", "foot", "heel", "toe"]
+TARGETS = ["bar", "head", "shoulder", "chest", "back", "belly", "glute", "hip", "thigh", "hamstring", "knee", "calf",
+           "foot", "heel", "toe"]
 PRESETS = {
     # голень вперёд, бедро от вертикали, наклон корпуса (None — подобрать по балансу), штанга, руки
     "stand": (3, 2, 3, False, "down"),
@@ -75,7 +76,11 @@ PROMPT = """Ниже статья для сайта тренера. Подбер
   bodyweight_squat (присед без веса), hinge (наклон с прямой спиной). highlight — какие мышцы работают
   (quads — квадрицепс, glutes — ягодичные, hams — задняя поверхность бедра, calves — икры, back — разгибатели спины,
   abs — пресс, traps — трапеции и верх спины). labels — 1–3 выноски: title до 22 символов, sub до 26 символов,
-  target — к какой точке тела. ghost — полупрозрачная вторая поза, чтобы показать движение. guide — линия-ориентир.
+  target — куда ведёт стрелка, и она должна вести ровно туда, о чём подпись: сустав — к суставу (боль в колене,
+  под чашечкой — knee; таз, тазобедренный — hip), мышца — к самой мышце (квадрицепс, передняя поверхность бедра —
+  thigh; задняя поверхность бедра — hamstring; ягодицы — glute; икры — calf; пресс, живот — belly;
+  разгибатели спины — back). Подпись про момент или ощущение («при подъёме», «тут сильнее») веди к тому месту,
+  о котором раздел, а не к соседнему суставу. ghost — полупрозрачная вторая поза, чтобы показать движение. guide — линия-ориентир.
   Бери pose, только если раздел про технику, положение тела или работу мышц и одна из поз подходит.
 - bars — сравнение чисел из текста: items[].label (до 30 символов), value — число, note — как подписать число
   («65 мм рт. ст.»). 2–6 строк. Заполни unit и source.
@@ -267,7 +272,10 @@ def draw_steps(f):
 
 def target_point(P, name):
     T = K.frame(P["hip"], P["top"])
+    F = K.frame(P["knee"], P["hip"])      # бедро: s > 0 — передняя поверхность (квадрицепс)
+    S_ = K.frame(P["ankle"], P["knee"])   # голень: s < 0 — икра
     pts = {
+        "thigh": F(0.5, 5.5), "hamstring": F(0.6, -4.5), "glute": T(0.12, -11), "calf": S_(0.6, -5),
         "bar": P["bar"] or T(1.03, -10.5), "head": T(1.3, -3.5), "shoulder": P["joint"], "chest": T(0.7, 5),
         "back": T(0.6, -10), "belly": T(0.3, 6), "hip": P["hip"], "knee": P["knee"],
         "foot": ((P["heel"][0] + P["toe"][0]) / 2, 2), "heel": P["heel"], "toe": P["toe"],
