@@ -448,6 +448,7 @@ def draw_exercise(f):
     out.append(f'<line class="floor" x1="32" y1="{floor_y + 3:.0f}" x2="{W - 32}" y2="{floor_y + 3:.0f}"/>')
     if B is None:
         out.append(side_plank(pen, set(on))[0])
+        out.append(txt(W - 32, floor_y - 34, "опора на колени,", "cue", "end"))
         out.append(txt(W - 32, floor_y - 8, "вид спереди", "cue", "end"))
     else:
         if A:
