@@ -4,6 +4,7 @@
 поэтому стиль у всех картинок один, а описание стоит центы.
 """
 import json
+import math
 import re
 
 import moves as M
@@ -288,6 +289,12 @@ def make_pose(name):
     return K.pose(sh, th, torso=torso, bar=bar, arms=arms)
 
 
+def order_labels(items):
+    """Выноски сверху вниз по углу к цели из колонки подписей: так линии не перекрещиваются
+    и не кажется, что «таз» показывает на колено."""
+    return sorted(items, key=lambda it: math.atan2(it[1][1] - 200, 372 - it[1][0]))
+
+
 def draw_pose(f):
     p = f["pose"]
     P = make_pose(p["preset"])
@@ -301,11 +308,10 @@ def draw_pose(f):
     elif p["guide"] == "toe_line":
         x = K.scr(P["toe"])[0]
         out.append(f'<line class="guide" x1="{x:.0f}" y1="{K.OY - 160:.0f}" x2="{x:.0f}" y2="{K.OY:.0f}"/>')
-    labels = p["labels"][:3]
-    for k, lb in enumerate(labels):
+    labels = order_labels([(lb, target_point(P, lb["target"])) for lb in p["labels"][:3]])
+    for k, (lb, to) in enumerate(labels):
         y = 70 + k * (300 / max(len(labels), 1))
-        out.append(K.label(380, y, lb["title"][:26], wrap(lb["sub"], 26)[:2] if lb["sub"] else None,
-                           to=target_point(P, lb["target"])))
+        out.append(K.label(380, y, lb["title"][:26], wrap(lb["sub"], 26)[:2] if lb["sub"] else None, to=to))
     return "".join(out), K.H
 
 
