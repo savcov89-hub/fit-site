@@ -104,6 +104,9 @@ def head(title, description, path, extra="", image=None):
 <meta property="og:url" content="{BASE}{path}">
 <meta property="og:locale" content="ru_RU">
 {f'<meta property="og:image" content="{BASE}{esc(image)}">' if image else ""}
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="theme-color" content="#121214" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
 <link rel="preload" href="/fonts/montserrat-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
