@@ -1,0 +1,157 @@
+<title>Проверка схем упражнений</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=PT+Sans:wght@400;700&display=swap">
+<style>
+/* Рабочий стол тренера: шапка со счётчиками и фильтром, сетка карточек «схема + решение». */
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1d1d1b; --muted:#66645c; --line:#dedbd2;
+  --accent:#d2491d; --ok:#2e7d4f; --ok-bg:#e3f1e8; --fix:#b3261e; --fix-bg:#fbe5e2; --draft-bg:#ecebe5;
+  --display:"Montserrat",system-ui,sans-serif; --body:"PT Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161615; --card:#201f1d; --ink:#ecebe6; --muted:#a9a8a1; --line:#34332f;
+  --accent:#f0703f; --ok:#6cc58f; --ok-bg:#1d3326; --fix:#f08b80; --fix-bg:#3a201d; --draft-bg:#2b2a27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161615; --card:#201f1d; --ink:#ecebe6; --muted:#a9a8a1; --line:#34332f;
+  --accent:#f0703f; --ok:#6cc58f; --ok-bg:#1d3326; --fix:#f08b80; --fix-bg:#3a201d; --draft-bg:#2b2a27; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:20px}
+h1{font:700 clamp(22px,4vw,30px)/1.2 var(--display);margin:0;text-wrap:balance}
+.lead{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font:600 14px var(--display);border:1px solid var(--line);background:var(--card);color:var(--ink);
+  border-radius:999px;padding:7px 14px;cursor:pointer;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:14px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:10px;align-content:start;min-width:0}
+.card img{width:100%;height:auto;display:block;border-radius:6px;background:var(--bg)}
+.head{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.name{font:600 16px/1.3 var(--display);margin:0}
+.meta{font-size:13px;color:var(--muted)}
+.pill{font:600 12px var(--display);letter-spacing:.04em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.pill.draft{background:var(--draft-bg);color:var(--muted)}
+.pill.approved{background:var(--ok-bg);color:var(--ok)}
+.pill.fix{background:var(--fix-bg);color:var(--fix)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.acts button{flex:1 1 120px;font:600 14px var(--display);border-radius:8px;padding:9px 10px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.acts .yes[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--card)}
+.acts .no[aria-pressed="true"]{background:var(--fix);border-color:var(--fix);color:var(--card)}
+textarea{width:100%;box-sizing:border-box;min-height:64px;font:15px/1.4 var(--body);color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical}
+.saved{font-size:13px;color:var(--muted);min-height:1em}
+.empty{padding:32px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+@media (prefers-reduced-motion:reduce){.card img{animation:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Проверка схем упражнений</h1>
+    <p class="lead">Посмотри, как двигается скелет, и отметь: всё верно или нужна правка. Если правка — напиши, что не так (угол, мышцы, подсказка). Агент статей берёт только одобренные схемы.</p>
+  </header>
+  <div class="bar" id="filters" role="group" aria-label="Фильтр по статусу"></div>
+  <p class="note" id="conn">Подключаю сохранение отметок…</p>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const EX = /*DATA*/[];
+const LABEL = {draft: "на проверке", fix: "нужна правка", approved: "одобрено"};
+const FILTERS = [["all", "Все"], ["draft", "На проверке"], ["fix", "Нужна правка"], ["approved", "Одобрено"]];
+let filter = "draft", reviews = {}, db = null;
+try { filter = localStorage.getItem("ex-filter") || filter } catch (e) {}
+
+const statusOf = e => (reviews[e.id] && reviews[e.id].status) || e.status;
+const commentOf = e => reviews[e.id] ? (reviews[e.id].comment || "") : (e.comment || "");
+
+function renderFilters() {
+  const box = document.getElementById("filters");
+  box.textContent = "";
+  for (const [k, t] of FILTERS) {
+    const n = k === "all" ? EX.length : EX.filter(e => statusOf(e) === k).length;
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button";
+    b.textContent = `${t} · ${n}`;
+    b.setAttribute("aria-pressed", String(filter === k));
+    b.onclick = () => { filter = k; try { localStorage.setItem("ex-filter", k) } catch (e) {} ; render() };
+    box.append(b);
+  }
+}
+
+function card(e) {
+  const st = statusOf(e);
+  const el = document.createElement("article");
+  el.className = "card"; el.id = "ex-" + e.id;
+  el.innerHTML = `<img alt="" loading="lazy" width="640">
+    <div class="head"><h2 class="name"></h2><span class="pill ${st}">${LABEL[st]}</span></div>
+    <div class="meta"></div>
+    <div class="acts"><button type="button" class="yes">Верно</button><button type="button" class="no">Нужна правка</button></div>
+    <textarea id="c-${e.id}" placeholder="Что поправить: например, «колено уходит за носок», «добавь широчайшие»"></textarea>
+    <div class="saved" aria-live="polite"></div>`;
+  el.querySelector("img").src = "ex/" + e.id + ".svg?v=" + e.v;
+  el.querySelector("img").alt = "Схема: " + e.name;
+  el.querySelector(".name").textContent = e.name;
+  el.querySelector(".meta").textContent = `${e.section} · ${e.muscles}`;
+  const ta = el.querySelector("textarea");
+  ta.value = commentOf(e);
+  const yes = el.querySelector(".yes"), no = el.querySelector(".no"), saved = el.querySelector(".saved");
+  yes.setAttribute("aria-pressed", String(st === "approved"));
+  no.setAttribute("aria-pressed", String(st === "fix"));
+  if (!db) { yes.disabled = no.disabled = true; ta.disabled = true }
+  const save = async status => {
+    saved.textContent = "Сохраняю…";
+    try {
+      const data = {status, comment: ta.value.trim(), updatedAt: new Date().toISOString()};
+      await db.collection("reviews").doc(e.id).set(data);
+      reviews[e.id] = data;
+      saved.textContent = status === "approved" ? "Одобрено, сохранено" : "Замечание сохранено";
+      renderFilters();
+      const pill = el.querySelector(".pill");
+      pill.className = "pill " + status; pill.textContent = LABEL[status];
+      yes.setAttribute("aria-pressed", String(status === "approved"));
+      no.setAttribute("aria-pressed", String(status === "fix"));
+    } catch (err) {
+      saved.textContent = "Не сохранилось: " + (err && err.message || "нет доступа") + ". Напиши замечание в чат.";
+    }
+  };
+  yes.onclick = () => save("approved");
+  no.onclick = () => {
+    if (!ta.value.trim()) { saved.textContent = "Напиши, что поправить, и нажми ещё раз"; ta.focus(); return }
+    save("fix");
+  };
+  return el;
+}
+
+function render() {
+  renderFilters();
+  const grid = document.getElementById("grid");
+  grid.textContent = "";
+  const list = EX.filter(e => filter === "all" || statusOf(e) === filter);
+  if (!list.length) {
+    const d = document.createElement("div"); d.className = "empty";
+    d.textContent = "Здесь пусто. Выбери другой фильтр.";
+    grid.append(d); return;
+  }
+  list.forEach(e => grid.append(card(e)));
+}
+
+render();
+(async () => {
+  const conn = document.getElementById("conn");
+  try {
+    db = await claude.use("db");
+  } catch (e) { db = null }
+  if (!db) { conn.textContent = "Отметки здесь не сохраняются: открой страницу в claude.ai под своим аккаунтом или напиши замечания в чат."; render(); return }
+  let first = true;
+  const timer = setTimeout(() => { if (first) conn.textContent = "База отметок долго отвечает, кнопки работают, отметки догрузятся." }, 10000);
+  db.collection("reviews").onSnapshot(snap => {
+    clearTimeout(timer);
+    reviews = {};
+    snap.docs.forEach(d => { reviews[d.id] = d.data() });
+    conn.textContent = "Отметки сохраняются автоматически, Claude их видит.";
+    if (first) { first = false; render() } else renderFilters();
+  }, err => { clearTimeout(timer); conn.textContent = "Не удалось загрузить отметки: " + err.message });
+})();
+</script>
