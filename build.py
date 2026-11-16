@@ -205,13 +205,11 @@ def reviews_html():
 
 
 def cta_html():
-    """Блок связи в конце статьи: где тренирую и кнопки мессенджеров."""
-    buttons = messengers_html()
-    if not buttons:
-        return ""
-    return (f'<aside class="cta-box"><p class="cta-title">Разберём на тренировке</p>'
-            f'<p>Тренирую в {esc(SITE["club"])}, {esc(SITE["city"])}. Если хотите поставить технику '
-            f'или собрать программу под свою цель, напишите или позвоните.</p>{buttons}</aside>')
+    """Нейтральный блок автора без продающего призыва."""
+    return (f'<aside class="cta-box"><p class="cta-title">Об авторе</p>'
+            f'<p>{esc(SITE["author"])} — {esc(SITE["author_role"])}. '
+            f'{esc(SITE["club"])}, {esc(SITE["city"])}. '
+            f'<a href="/#obo-mne">Образование и опыт</a>.</p></aside>')
 
 
 def load_articles():
@@ -295,12 +293,13 @@ def render_article(a, all_articles):
         crumb_cat = f'<span>/</span><a href="/stati/{esc(c["slug"])}/">{esc(c["name"])}</a>'
     words = len(a["body"].split())
     minutes = max(1, round(words / 180))
+    updated_label = f' · Обновлено {ru_date(a["updated"])}' if a.get("updated") and a["updated"] != a["date"] else ""
     page = head(a.get("seo_title", a["title"]), a["description"], path, article_jsonld(a, BASE + path),
                 a.get("image"))
     page += f"""<article class="post wrap narrow">
 <p class="crumbs"><a href="/">Главная</a><span>/</span><a href="/stati/">Статьи</a>{crumb_cat}</p>
 <h1>{esc(a["title"])}</h1>
-<div class="byline">{portrait("avatar", 240, 240, small=True)}<div><b>{esc(SITE["author"])}</b><br><span class="muted">{esc(SITE["author_role"].capitalize())} · {ru_date(a["date"])} · {minutes} мин чтения</span></div></div>
+<div class="byline">{portrait("avatar", 240, 240, small=True)}<div><b>{esc(SITE["author"])}</b><br><span class="muted">{esc(SITE["author_role"].capitalize())} · {ru_date(a["date"])}{updated_label} · {minutes} мин чтения</span></div></div>
 {cover}
 <div class="prose">
 {body}
