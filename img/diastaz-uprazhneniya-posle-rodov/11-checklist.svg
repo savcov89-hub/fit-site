@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 362" role="img" aria-label="Главный стоп-сигнал — «гребень» по центру, боль или тяжесть внизу живота."><title>Главный стоп-сигнал — «гребень» по центру, боль или тяжесть внизу живота.</title>
+<style>
+.bone{fill:#efe9dc;stroke:#7d776b;stroke-width:2;stroke-linejoin:round}
+.joint{fill:#efe9dc;stroke:#7d776b;stroke-width:2}
+.vert{fill:#e2dccd;stroke:#7d776b;stroke-width:1.2}
+.m{fill:#c7867a;fill-opacity:.42;stroke:#a9665a;stroke-opacity:.55;stroke-width:1}
+.on{fill:#d2491d;fill-opacity:.82;stroke:#9c3412;stroke-opacity:.9}
+.plate{fill:#3a3a37;fill-opacity:.1;stroke:#3a3a37;stroke-width:3}
+.bar{fill:#3a3a37}
+.ghost{opacity:.18}
+.ground{stroke:#b9b5aa;stroke-width:3}
+.guide{stroke:#3d7fb8;stroke-width:2.5;stroke-dasharray:8 7;fill:none}
+.arrow{stroke:#d2491d;stroke-width:5;fill:none;stroke-linecap:round;marker-end:url(#ah)}
+.ahead{fill:#d2491d}
+.lead{stroke:#6b6b66;stroke-width:1.5;fill:none}
+.t{font:600 21px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#1d1d1b}
+.s{font:400 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#55554f}
+.ok{fill:#2e8b57}.bad{fill:#c0392b}
+.balloon{fill:#3d7fb8;fill-opacity:.25;stroke:#3d7fb8;stroke-width:2}
+@media (prefers-color-scheme:dark){
+.bone,.joint{fill:#d9d3c4;stroke:#3b3934}.vert{fill:#c9c2b2;stroke:#3b3934}
+.plate{fill:#ecebe6;fill-opacity:.12;stroke:#bdbbb3}.bar{fill:#bdbbb3}
+.t{fill:#ecebe6}.s{fill:#a9a8a1}.lead{stroke:#9a9993}.ground{stroke:#55534d}
+.arrow{stroke:#f0703f}.ahead{fill:#f0703f}.on{fill:#f0703f}
+}
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+<path class="ahead" d="M0 0L10 5L0 10z"/></marker></defs>
+<style>
+.small{font-size:15px}
+.barfill{fill:#d2491d}.track{stroke:#d9d5ca;stroke-width:3}
+.card{fill:#f3f1ea;stroke:#e2ded2}.dot{fill:#d2491d}
+.okc{fill:#2e8b57}.badc{fill:#c0392b}.mark{stroke:#fff;stroke-width:3.5;fill:none;stroke-linecap:round}
+.num{fill:#d2491d}.numt{font:700 18px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;fill:#fff}
+@media (prefers-color-scheme:dark){.barfill,.dot,.num{fill:#f0703f}.track{stroke:#3a3934}.card{fill:#26262a;stroke:#34343a}}
+</style><text class="t" x="32" y="44" text-anchor="start">Коротко о главном</text><circle class="okc" cx="48" cy="88" r="15"/><path class="mark" d="M41 88l5 5 9 -10"/><text class="t" x="76" y="95" text-anchor="start">Начинать с поперечной мышцы</text><circle class="okc" cx="48" cy="142" r="15"/><path class="mark" d="M41 142l5 5 9 -10"/><text class="t" x="76" y="149" text-anchor="start">Получить разрешение врача перед стартом</text><circle class="okc" cx="48" cy="196" r="15"/><path class="mark" d="M41 196l5 5 9 -10"/><text class="t" x="76" y="203" text-anchor="start">Смотреть на функцию, а не только на мм</text><circle class="okc" cx="48" cy="250" r="15"/><path class="mark" d="M41 250l5 5 9 -10"/><text class="t" x="76" y="257" text-anchor="start">Скручивания в малой амплитуде после контроля</text><circle class="badc" cx="48" cy="304" r="15"/><path class="mark" d="M42 298l12 12M54 298l-12 12"/><text class="t" x="76" y="311" text-anchor="start">Терпеть «гребень», боль или тяжесть</text></svg>

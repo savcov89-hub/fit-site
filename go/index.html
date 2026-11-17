@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Переход к оплате</title>
+<script>
+// кнопка «Оплатить» из бота: отмечаем нажатие в панели бота и сразу ведём на оплату (Продамус или заглушка бота)
+(function () {
+  var BOT = 'https://voronka.pages.dev';
+  var q = new URLSearchParams(location.search), b = q.get('b') || '', to = q.get('to') || '';
+  var ok = false;
+  try { var h = new URL(to).hostname; ok = /(^|\.)payform\.ru$/.test(h) || h === 'voronka.pages.dev'; } catch (e) {}
+  if (!ok) to = 'https://t.me/yagoditsy_mini_bot';
+  if (/^\d+\.[0-9a-f]{12}$/.test(b)) {
+    try { fetch(BOT + '/ev?e=pay&b=' + b, { mode: 'no-cors', keepalive: true }); } catch (e) { new Image().src = BOT + '/ev?e=pay&b=' + b; }
+  }
+  window.__to = to;
+  location.replace(to);
+})();
+</script>
+<style>body{margin:0;font:16px/1.5 system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;text-align:center;color:#151922}a{display:inline-block;margin-top:14px;background:#E8173F;color:#fff;text-decoration:none;font-weight:700;padding:14px 22px;border-radius:12px}</style>
+</head><body><div><p>Открываю оплату…</p><a id="go" href="https://t.me/yagoditsy_mini_bot">Перейти к оплате</a></div>
+<script>document.getElementById('go').href = window.__to;</script></body></html>
