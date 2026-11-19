@@ -1,0 +1,46 @@
+id,name,section,muscles,status,comment
+squat_bw,Приседания без веса,ноги,quads glutes,approved,
+squat_back,Приседания со штангой на спине,ноги,quads glutes back,approved,
+split_squat,Выпад на месте,ноги,quads glutes,approved,
+rdl,Румынская тяга со штангой,ноги,hams glutes back,approved,
+row_bent,Тяга штанги в наклоне,спина,lats traps biceps,approved,
+glute_bridge,Ягодичный мостик,ноги,glutes hams,draft,"Исправлено: наверху плечи, таз и колени на одной линии, поясница не прогибается"
+bird_dog,«Птица-собака»,кор,glutes back abs,approved,
+dead_bug,«Мёртвый жук»,кор,abs tva,approved,
+crunch,Скручивания лёжа,кор,abs,approved,
+plank,Планка на предплечьях,кор,abs tva delts,approved,
+pushup,Отжимания от пола,грудь,chest triceps delts,approved,
+curl_db,Сгибание рук с гантелями,руки,biceps,approved,
+press_db,Жим гантелей стоя,плечи,delts triceps,approved,
+calf_raise,Подъём на носки,ноги,calves,approved,
+bench_press,Жим штанги лёжа,грудь,chest triceps delts,approved,
+deadlift,Становая тяга,ноги,glutes hams back quads,draft,"Исправлено: гриф идёт вдоль голеней и бёдер, колени не пересекает"
+goblet_squat,Гоблет-присед с гантелью,ноги,quads glutes,approved,
+good_morning,«Доброе утро» со штангой,ноги,hams glutes back,draft,"Исправлено: таз отводится назад, центр тяжести над стопами"
+ohp,Жим штанги стоя,плечи,delts triceps,draft,"Исправлено: гриф идёт ближе к лицу, корпус чуть отклоняется назад"
+front_raise,Подъём гантелей перед собой,плечи,delts,approved,
+triceps_ext,Разгибание руки с гантелью из-за головы,руки,triceps,approved,
+row_db,Тяга гантелей в наклоне,спина,lats traps biceps,approved,
+reverse_crunch,Обратные скручивания,кор,abs hipflex,draft,"Исправлено: таз и поясница поднимаются от пола, лопатки лежат"
+leg_raise,Подъём прямых ног лёжа,кор,abs hipflex,approved,
+superman,«Супермен»,спина,back glutes,draft,"Исправлено: прогиб в пояснице, грудь и ноги поднимаются от пола"
+cat_cow,«Кошка-корова»,спина,back abs,approved,
+kickback,Отведение ноги назад на четвереньках,ноги,glutes hams,draft,"Исправлено: опорное колено на полу, корпус не качается, видна вторая нога"
+bridge_single,Ягодичный мостик на одной ноге,ноги,glutes hams,draft,"Исправлено: лопатки и голова на полу, опорная стопа не отрывается; наверху тело и поднятая нога на одной линии"
+high_plank,Планка на прямых руках,кор,abs tva delts,draft,Исправлено: руки прямые
+forward_fold,Наклон к ногам стоя,растяжка,hams back,draft,"Исправлено: таз уходит назад, центр тяжести над стопами"
+knee_pushup,Отжимания с колен,грудь,chest triceps delts,draft,
+pullover,Пуловер с гантелью лёжа,спина,lats chest triceps,draft,
+skull_crusher,Французский жим с гантелями лёжа,руки,triceps,draft,
+single_leg_rdl,Румынская тяга на одной ноге,ноги,hams glutes back,draft,
+kb_swing,Махи гирей,ноги,glutes hams back,draft,
+hip_thrust,Ягодичный мостик от скамьи со штангой,ноги,glutes hams,draft,
+bulgarian,Болгарский сплит-присед,ноги,quads glutes,draft,
+pullup,Подтягивания на турнике,спина,lats biceps traps,draft,
+hanging_knee_raise,Подъём коленей в висе,кор,abs hipflex,draft,
+seated_band_row,Тяга резинки сидя,спина,lats biceps traps,draft,
+seated_fold,Наклон к ногам сидя,растяжка,hams back,draft,
+hip_flexor_stretch,Растяжка сгибателей бедра на колене,растяжка,hipflex quads,draft,
+knee_to_chest,Колено к груди лёжа,растяжка,glutes back,draft,
+quad_stretch,Растяжка передней поверхности бедра стоя,растяжка,quads hipflex,draft,
+cobra,Прогиб лёжа на руках («кобра»),растяжка,back,draft,
