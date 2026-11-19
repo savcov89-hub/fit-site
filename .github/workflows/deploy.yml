@@ -1,0 +1,38 @@
+name: deploy
+
+# Выкладка сайта в Yandex Object Storage. Работает, когда задана переменная YC_BUCKET
+# и секреты YC_ACCESS_KEY_ID / YC_SECRET_ACCESS_KEY (см. README).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: vars.YC_BUCKET != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # ref: main — при вызове из write-article статья уже запушена после старта workflow
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python3 build.py
+      - name: Загрузить в бакет
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ru-central1
+          BUCKET: ${{ vars.YC_BUCKET }}
+        run: |
+          aws s3 sync public/ "s3://$BUCKET" --delete \
+            --endpoint-url https://storage.yandexcloud.net
