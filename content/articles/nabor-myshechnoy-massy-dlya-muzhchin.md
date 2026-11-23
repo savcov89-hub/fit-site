@@ -60,7 +60,7 @@
     },
     {
       "title": "Schoenfeld, Ogborn, Krieger, Dose-response relationship between weekly resistance training volume and increases in muscle mass (2017)",
-      "url": "https://www.semanticscholar.org/paper/Dose-response-relationship-between-weekly-training-Schoenfeld-Ogborn/0d34206f962394983054451cddd8a3b91818f732"
+      "url": "https://pubmed.ncbi.nlm.nih.gov/27433992/"
     },
     {
       "title": "ACSM Position Stand: Resistance Training Prescription for Muscle Function, Hypertrophy, and Physical Performance in Healthy Adults: An Overview of Reviews (2026)",
@@ -68,7 +68,7 @@
     },
     {
       "title": "ACSM Position Stand: Progression models in resistance training for healthy adults (2009)",
-      "url": "https://www.researchgate.net/publication/235653976_Progression_models_in_resistance_training_for_healthy_adults_ACSM_position_stand"
+      "url": "https://pubmed.ncbi.nlm.nih.gov/19204579/"
     },
     {
       "title": "Helms et al., Effect of Small and Large Energy Surpluses on Strength, Muscle, and Skinfold Thickness (Sports Medicine – Open, 2023)",
@@ -339,6 +339,8 @@
 - **Белок выше 3 г/кг.** Есть только предварительные данные о пользе для состава тела.
 - **Объём выше 20 подходов** и роль частоты для роста мышц — данные неоднозначны.
 - **Возраст.** Большинство исследований на молодых здоровых людях. О мужчинах старше 40–50 лет и тех, кто начинает с большим лишним весом, данных меньше.
+
+Если основная трудность — вес не растёт и сложно достаточно есть, есть отдельный [разбор набора массы для худого парня](/stati/kak-nabrat-massu-hudomu-parnyu/). Вопросы добавок и восстановления вынесены в материалы [о креатине](/stati/kreatin-polza-i-kak-prinimat/) и [о сне после тренировок](/stati/son-i-vosstanovlenie-posle-trenirovok/).
 
 ## Шпаргалка
 
